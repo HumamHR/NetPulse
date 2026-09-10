@@ -1,0 +1,861 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>NETPULSE | Live Dashboard</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+
+    <style>
+        /* --- CORE THEME --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --cyber-blue: #00f3ff;
+            --cyber-purple: #9d00ff;
+            --cyber-dark: #0a0a0f;
+            --cyber-darker: #05050a;
+            --cyber-gray: #1a1a2e;
+            --cyber-light: #e6e6e6;
+            --cyber-green: #00ff9d;
+            --cyber-red: #ff0055;
+            --cyber-warn: #ffcc00;
+            --cyber-grey: #888888;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--cyber-darker);
+            color: var(--cyber-light);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto; 
+            overflow-x: hidden;
+        }
+
+        /* --- BACKGROUND EFFECTS --- */
+        .cyber-effects {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0;
+        }
+        .scan-line {
+            position: absolute; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent);
+            top: 0; animation: scan 3s linear infinite; opacity: 0.3;
+        }
+        .grid-overlay {
+            position: absolute; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px; opacity: 0.2;
+        }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+        /* --- SCROLLBARS --- */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--cyber-darker); }
+        ::-webkit-scrollbar-thumb { background: var(--cyber-blue); border-radius: 4px; }
+
+        /* --- HEADER --- */
+        .cyber-header {
+            background: linear-gradient(135deg, var(--cyber-darker) 0%, var(--cyber-gray) 50%, var(--cyber-darker) 100%);
+            position: relative; z-index: 5000; border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+            height: 60px; display: flex; align-items: center; padding: 0 20px; flex-shrink: 0;
+        }
+        .logo-text {
+            font-family: 'Orbitron', sans-serif; font-size: 1.5rem; font-weight: 700;
+            background: linear-gradient(45deg, var(--cyber-blue), var(--cyber-purple));
+            -webkit-background-clip: text; -moz-background-clip: text; background-clip: text;
+            color: transparent; display: flex; align-items: center; gap: 10px;
+        }
+        
+        .status-container {
+            margin-left: 30px;
+            font-family: 'Orbitron';
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(0,0,0,0.3);
+            padding: 5px 15px;
+            border-radius: 20px;
+            border: 1px solid rgba(0, 243, 255, 0.2);
+        }
+
+        .nav-links a {
+            color: var(--cyber-light); text-decoration: none; margin-left: 20px; font-family: 'Orbitron'; font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+        .nav-links a:hover { color: var(--cyber-blue); }
+
+        /* --- DASHBOARD GRID LAYOUT --- */
+        .dashboard-container {
+            display: grid;
+            grid-template-columns: 300px 1fr 350px;
+            grid-template-rows: 550px 250px;
+            gap: 20px;
+            padding: 20px;
+            position: relative;
+            z-index: 2;
+            margin-bottom: 40px;
+        }
+
+        /* --- PANELS --- */
+        .dash-panel {
+            background: rgba(10, 20, 40, 0.5); 
+            border: 1px solid rgba(77, 140, 255, 0.2);
+            border-radius: 8px; 
+            overflow: hidden; 
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            backdrop-filter: blur(5px);
+        }
+
+        .panel-header {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px 15px;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+            color: var(--cyber-blue);
+            font-family: 'Orbitron';
+            font-size: 0.85rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-shrink: 0;
+        }
+
+        /* --- CONTROLS PANEL --- */
+        .controls-panel {
+            grid-column: 1 / 2;
+            grid-row: 1 / 2;
+            padding: 15px;
+            gap: 10px;
+            overflow: hidden; 
+        }
+
+        .input-group { margin-bottom: 10px; }
+        .input-group label { display: block; color: #888; font-size: 0.75rem; margin-bottom: 3px; font-family: 'Orbitron'; }
+        
+        .cyber-input {
+            width: 100%; background: rgba(0,0,0,0.5); 
+            border: 1px solid rgba(0, 243, 255, 0.3); color: var(--cyber-blue); 
+            padding: 8px; font-family: 'Courier New'; border-radius: 4px; 
+        }
+        .cyber-input:focus { outline: none; border-color: var(--cyber-blue); box-shadow: 0 0 10px rgba(0, 243, 255, 0.2); }
+
+        .cyber-btn {
+            width: 100%; padding: 10px; margin-bottom: 8px;
+            background: rgba(0, 243, 255, 0.1); border: 1px solid var(--cyber-blue);
+            color: var(--cyber-blue); font-family: 'Orbitron'; font-weight: bold; cursor: pointer;
+            transition: all 0.3s; border-radius: 4px; text-transform: uppercase; font-size: 0.85rem;
+        }
+        .cyber-btn:hover:not(:disabled) { background: var(--cyber-blue); color: #000; box-shadow: 0 0 15px var(--cyber-blue); }
+        .cyber-btn:disabled { opacity: 0.5; cursor: not-allowed; border-color: #444; color: #666; }
+        
+        .btn-stop { border-color: var(--cyber-red); color: var(--cyber-red); background: rgba(255, 0, 85, 0.1); }
+        .btn-stop:hover { background: var(--cyber-red); color: white; box-shadow: 0 0 15px var(--cyber-red); }
+
+        .stat-display {
+            background: rgba(255,255,255,0.03); padding: 12px; 
+            border-radius: 5px; border-left: 3px solid var(--cyber-blue);
+            margin-top: 8px;
+            flex-shrink: 0; 
+        }
+        .stat-val { font-family: 'Orbitron'; font-size: 1.4rem; color: #fff; }
+        .stat-lbl { font-size: 0.65rem; color: #888; text-transform: uppercase; }
+
+        /* --- MAP AREA --- */
+        .map-panel {
+            grid-column: 2 / 3;
+            grid-row: 1 / 2;
+            position: relative;
+        }
+        #worldMap { width: 100%; height: 100%; background: #0b0b14; }
+
+        /* --- ALERTS PANEL --- */
+        .logs-panel {
+            grid-column: 3 / 4;
+            grid-row: 1 / 2;
+        }
+        .log-feed { 
+            flex: 1; overflow-y: auto; padding: 10px; 
+            font-family: 'Courier New', monospace; font-size: 0.85rem; 
+        }
+        .log-item { 
+            margin-bottom: 8px; border-bottom: 1px solid rgba(255,255,255,0.05); 
+            padding: 8px; background: rgba(0,0,0,0.2); border-radius: 4px;
+            animation: flash 0.5s; display: flex; flex-direction: column; gap: 5px;
+        }
+        .log-item.threat { border-left: 3px solid var(--cyber-red); }
+        .log-item.warn { border-left: 3px solid var(--cyber-warn); }
+        .log-item.neutral { border-left: 3px solid var(--cyber-grey); }
+        
+        .log-content { flex: 1; display: flex; gap: 10px; align-items: flex-start; }
+        .log-meta { color: #888; font-size: 0.7rem; margin-top: 3px; }
+
+        /* --- CHARTS ROW --- */
+        .charts-row {
+            grid-column: 1 / -1;
+            grid-row: 2 / 3;
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+        .chart-container { 
+            position: relative; 
+            width: 100%; 
+            height: 100%; 
+            padding: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* --- DETAILS TABLES --- */
+        .details-container {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px; 
+            padding: 0 20px 40px 20px;
+            align-items: start;
+        }
+
+        .table-wrapper { flex: 1; overflow-y: auto; max-height: 400px; }
+        
+        .cyber-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; color: #ccc; }
+        .cyber-table th {
+            background: #0a0a0f; color: var(--cyber-blue); 
+            text-align: left; padding: 12px 15px; font-family: 'Orbitron';
+            position: sticky; top: 0; z-index: 10;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+        }
+        
+        .cyber-table td { 
+            padding: 10px 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); 
+            font-family: 'Roboto', sans-serif;
+            font-size: 0.85rem;
+            vertical-align: middle;
+        }
+        .cyber-table tr:hover { background: rgba(0, 243, 255, 0.05); }
+
+        .wrap-text {
+            white-space: pre-wrap; word-break: break-all; max-width: 400px;
+        }
+
+        /* --- MODAL STYLES (SHARED) --- */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(5, 5, 10, 0.85); z-index: 10000;
+            display: none; justify-content: center; align-items: center;
+            backdrop-filter: blur(8px);
+        }
+        .modal-content {
+            background: rgba(10, 20, 30, 0.95);
+            border: 1px solid var(--cyber-blue);
+            width: 500px;
+            border-radius: 8px;
+            padding: 0;
+            box-shadow: 0 0 30px rgba(0, 243, 255, 0.15);
+            position: relative;
+            overflow: hidden;
+            animation: modalFadeIn 0.3s ease-out;
+        }
+        .modal-header {
+            background: linear-gradient(90deg, rgba(0,243,255,0.1), transparent);
+            padding: 15px 20px;
+            font-family: 'Orbitron';
+            color: var(--cyber-blue);
+            border-bottom: 1px solid rgba(0,243,255,0.2);
+            font-size: 1.1rem;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .modal-body {
+            padding: 30px;
+            text-align: center;
+        }
+        .progress-container {
+            width: 100%; background: rgba(255,255,255,0.05);
+            height: 6px; border-radius: 3px; margin: 20px 0;
+            position: relative; overflow: hidden;
+        }
+        .progress-bar {
+            height: 100%; width: 0%;
+            background: var(--cyber-blue);
+            box-shadow: 0 0 10px var(--cyber-blue);
+            transition: width 0.3s ease;
+            position: relative;
+        }
+        .progress-bar::after {
+            content: ''; position: absolute; top:0; left:0; width:100%; height:100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            animation: shimmer 1s infinite;
+        }
+        .code-scroller {
+            font-family: 'Courier New'; color: #666; font-size: 0.7rem;
+            height: 60px; overflow: hidden; opacity: 0.7; text-align: left;
+            border-top: 1px solid rgba(255,255,255,0.05); margin-top: 20px; padding-top: 10px;
+        }
+        
+        /* --- PAYLOAD INSPECTOR SPECIFIC --- */
+        #payloadContent, #headersContent {
+            height: 250px;
+            overflow-y: auto;
+            color: #ffcc00;
+            background: rgba(0,0,0,0.3);
+            padding: 15px;
+            border-radius: 4px;
+            border: 1px solid rgba(255, 204, 0, 0.2);
+            opacity: 1;
+            white-space: pre-wrap;
+            word-break: break-all;
+        }
+        
+        #headersContent {
+            color: var(--cyber-blue);
+            border-color: rgba(0, 243, 255, 0.2);
+        }
+        
+        @keyframes shimmer { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+        @keyframes modalFadeIn { from { opacity: 0; transform: scale(0.9); } to { opacity: 1; transform: scale(1); } }
+        @keyframes flash { from { opacity: 0; } to { opacity: 1; } }
+        .cyber-btn.btn-stop:hover {
+            background: linear-gradient(90deg, #ff0055, #ff3333);
+            box-shadow: 0 0 20px rgba(255, 0, 85, 0.8);
+        }
+    </style>
+</head>
+<body>
+
+    <div class="cyber-effects">
+        <div class="scan-line"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <div id="analysisModal" class="modal-overlay">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span><i class="fas fa-microchip fa-spin"></i> ANALYZING TRAFFIC</span>
+            </div>
+            <div class="modal-body">
+                <p id="analysisStatus" style="font-family: 'Orbitron'; color: #fff; margin-bottom: 5px;">PROCESSING CAPTURED PACKETS...</p>
+                <div style="font-size: 0.8rem; color: #888;" id="analysisSubStatus">Extracting artifacts & mapping threats</div>
+                <div class="progress-container">
+                    <div id="progressBar" class="progress-bar"></div>
+                </div>
+                <div class="code-scroller" id="codeScroller">
+                    > Initializing deep packet inspection...<br>
+                    > Parsing TLS headers...<br>
+                    > Correlating GeoIP data...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="stopModal" class="modal-overlay">
+        <div class="modal-content" style="border-color: var(--cyber-red);">
+            <div class="modal-header" style="color: var(--cyber-red); border-bottom-color: rgba(255,0,85,0.3); background: linear-gradient(90deg, rgba(255,0,85,0.1), transparent);">
+                <span><i class="fas fa-power-off fa-spin"></i> TERMINATING CAPTURE</span>
+            </div>
+            <div class="modal-body">
+                <p style="font-family: 'Orbitron'; color: #fff; margin-bottom: 5px;">HALTING NETWORK INTERFACES...</p>
+                <div style="font-size: 0.8rem; color: #888;">Flushing buffers & saving PCAP state</div>
+                <div class="progress-container">
+                    <div id="stopProgressBar" class="progress-bar" style="background: var(--cyber-red); box-shadow: 0 0 10px var(--cyber-red);"></div>
+                </div>
+                <div class="code-scroller" style="color: var(--cyber-red);">
+                    > Sending SIGTERM to sniffer process...<br>
+                    > Releasing network adapters...<br>
+                    > Finalizing capture logs...
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="payloadModal" class="modal-overlay">
+        <div class="modal-content" style="width: 650px; border-color: var(--cyber-red);">
+            <div class="modal-header" style="color: var(--cyber-red); border-bottom-color: rgba(255,0,85,0.3); background: linear-gradient(90deg, rgba(255,0,85,0.1), transparent);">
+                <span><i class="fas fa-bug"></i> THREAT PAYLOAD INSPECTOR</span>
+                <span style="cursor:pointer; color:#fff;" onclick="closePayloadModal()"><i class="fas fa-times"></i></span>
+            </div>
+            <div class="modal-body" style="text-align: left;">
+                <div style="margin-bottom: 15px; color: #aaa; font-size: 0.85rem; font-family: 'Orbitron';">
+                    <div style="margin-bottom:5px;"><span style="color:#fff;">ALERT:</span> <span id="payloadAlertMsg" style="color:var(--cyber-red);"></span></div>
+                    <div><span style="color:#fff;">RULE SID:</span> <span id="payloadSid" style="color:var(--cyber-blue);"></span></div>
+                </div>
+                <div style="font-family:'Orbitron'; font-size:0.7rem; color:#666; margin-bottom:5px;">CAPTURED PAYLOAD DATA:</div>
+                <div class="code-scroller" id="payloadContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="headersModal" class="modal-overlay">
+        <div class="modal-content" style="width: 650px; border-color: var(--cyber-blue);">
+            <div class="modal-header">
+                <span><i class="fas fa-list-alt"></i> HTTP/S HEADERS INSPECTOR</span>
+                <span style="cursor:pointer; color:#fff;" onclick="closeHeadersModal()"><i class="fas fa-times"></i></span>
+            </div>
+            <div class="modal-body" style="text-align: left;">
+                <div style="font-family:'Orbitron'; font-size:0.7rem; color:#666; margin-bottom:5px;">REQUEST HEADERS:</div>
+                <div class="code-scroller" id="headersContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <header class="cyber-header">
+        <div class="logo-text">
+            <i class="fas fa-satellite-dish"></i> NETPULSE <span style="font-size: 0.8rem; margin-left: 10px; opacity: 0.7;">------------</span>
+        </div>
+        <div class="status-container">
+            STATUS: <span id="statusText" style="color: #666; font-weight: bold;">OFFLINE</span>
+            <span id="statusDot" style="width: 8px; height: 8px; background: #666; border-radius: 50%; display: inline-block;"></span>
+        </div>
+        <div class="nav-links" style="margin-left: auto;">
+            <a href="{% url 'index' %}">Home</a>
+            <a href="{% url 'upload' %}">New Scan</a>
+        </div>
+    </header>
+
+    <div class="dashboard-container">
+        <div class="dash-panel controls-panel">
+            <div style="font-family: 'Orbitron'; color: var(--cyber-blue); margin-bottom: 10px; border-bottom: 1px solid #333; padding-bottom: 5px;">
+                SYSTEM CONTROL
+            </div>
+            <div class="input-group">
+                <label>FILTER (BPF)</label>
+                <input id="bpf" class="cyber-input" placeholder="e.g. port 80 or tcp">
+            </div>
+            <div class="input-group">
+                <label>INTERFACE</label>
+                <input id="iface" class="cyber-input" placeholder="Default">
+            </div>
+            <button id="startBtn" class="cyber-btn"><i class="fas fa-play"></i> START CAPTURING</button>
+            <button id="stopBtn" class="cyber-btn btn-stop"><i class="fas fa-stop"></i> TERMINATE</button>
+            <button id="analyzeBtn" class="cyber-btn" disabled style="margin-top: 15px; border-color: var(--cyber-green); color: var(--cyber-green);">
+                <i class="fas fa-microchip"></i> ANALYZE TRAFFIC
+            </button>
+            <div style="margin-top: auto; padding-bottom: 10px;">
+                <div class="stat-display">
+                    <div class="stat-val" id="pktCount">0</div>
+                    <div class="stat-lbl">Packets Captured</div>
+                </div>
+                <div class="stat-display" style="border-color: var(--cyber-red);">
+                    <div class="stat-val" id="threatCount" style="color: var(--cyber-red);">0</div>
+                    <div class="stat-lbl">Threats Detected</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="dash-panel map-panel">
+            <div id="worldMap"></div>
+            <div style="position: absolute; top:10px; right:10px; background:rgba(0,0,0,0.8); padding:10px; border:1px solid rgba(77, 140, 255, 0.3); border-radius: 4px; z-index:999; color:#fff; font-size:0.7rem;">
+                <div style="display:flex; align-items:center; gap:5px; margin-bottom:3px;"><span style="width:8px; height:8px; background:var(--cyber-red); border-radius:50%;"></span> High Risk</div>
+                <div style="display:flex; align-items:center; gap:5px;"><span style="width:8px; height:8px; background:var(--cyber-blue); border-radius:50%;"></span> Safe</div>
+            </div>
+        </div>
+
+        <div class="dash-panel logs-panel">
+            <div class="panel-header" style="color: var(--cyber-red);">
+                <span><i class="fas fa-radiation"></i> THREAT FEED<br>IDS - ABUSEIP</span>
+                <span style="font-size: 0.7rem; opacity: 0.7;">REAL-TIME</span>
+            </div>
+            <div id="logFeed" class="log-feed">
+                <div style="color: #666; text-align: center; margin-top: 20px; font-style: italic;">
+                    System Ready...
+                </div>
+            </div>
+        </div>
+
+        <div class="charts-row">
+            <div class="dash-panel">
+                <div class="panel-header">
+                    <span><i class="fas fa-wave-square"></i> TRAFFIC VOLUME</span>
+                </div>
+                <div class="chart-container">
+                    <canvas id="trafficChart"></canvas>
+                </div>
+            </div>
+            <div class="dash-panel">
+                <div class="panel-header">
+                    <span><i class="fas fa-chart-pie"></i> PROTOCOLS</span>
+                </div>
+                <div class="chart-container" style="height: 200px; padding: 5px;">
+                    <canvas id="protoChart"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="details-container">
+        
+        <div class="dash-panel" style="border-color: rgba(255, 204, 0, 0.3);">
+            <div class="panel-header" style="color: var(--cyber-warn);">
+                <span><i class="fas fa-id-card"></i> WHOIS INTELLIGENCE</span>
+                <span style="font-size: 0.7rem; opacity: 0.7;">LIVE FEED</span>
+            </div>
+            <div class="table-wrapper">
+                <table class="cyber-table" id="whoisTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 25%;">IP Address</th>
+                            <th style="width: 35%;">ISP / Org</th>
+                            <th style="width: 25%;">Registrar</th>
+                            <th style="width: 15%;">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="dash-panel" style="border-color: rgba(255, 204, 0, 0.3);">
+            <div class="panel-header" style="color: var(--cyber-warn);">
+                <span><i class="fas fa-comments"></i> ABUSE REPORTS</span>
+                <span style="font-size: 0.7rem; opacity: 0.7;">COMMUNITY DATA</span>
+            </div>
+            <div class="table-wrapper">
+                <table class="cyber-table" id="abuseTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 20%;">IP Address</th>
+                            <th style="width: 15%;">Date</th>
+                            <th style="width: 50%;">Comment / Status</th>
+                            <th style="width: 20%;">Reporter / Source</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="dash-panel" style="grid-column: 1 / -1; margin-top: 40px; border-color: rgba(0, 243, 255, 0.3);">
+            <div class="panel-header">
+                <span><i class="fas fa-upload"></i> OUTGOING HTTP/S HEADERS</span>
+                <span style="font-size: 0.7rem; opacity: 0.7;">CLIENT REQUESTS</span>
+            </div>
+            <div class="table-wrapper">
+                <table class="cyber-table" id="headersTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 10%;">Time</th>
+                            <th style="width: 10%;">Method</th>
+                            <th style="width: 25%;">Host</th>
+                            <th style="width: 45%;">URL Path</th>
+                            <th style="width: 10%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="dash-panel" style="grid-column: 1 / -1; margin-top: 20px; border-color: rgba(0, 243, 255, 0.3);">
+            <div class="panel-header">
+                <span><i class="fas fa-download"></i> INCOMING HTTP/S HEADERS</span>
+                <span style="font-size: 0.7rem; opacity: 0.7;">SERVER RESPONSES</span>
+            </div>
+            <div class="table-wrapper">
+                <table class="cyber-table" id="incomingHeadersTable">
+                    <thead>
+                        <tr>
+                            <th style="width: 10%;">Time</th>
+                            <th style="width: 10%;">Status</th>
+                            <th style="width: 25%;">Source (Host)</th>
+                            <th style="width: 45%;">Content-Type / Info</th>
+                            <th style="width: 10%;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
+            </div>
+        </div>
+
+    </div>
+
+ {% csrf_token %}
+   <script>
+        // --- MAP & CHARTS SETUP ---
+        const bounds = [[-85, -180], [85, 180]];
+        const map = L.map('worldMap', { 
+            zoomControl: false, attributionControl: false, 
+            maxBounds: bounds, maxBoundsViscosity: 1.0, minZoom: 2
+        }).setView([20, 0], 2);
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { maxZoom: 18, minZoom: 2, noWrap: true, bounds: bounds }).addTo(map);
+        const markers = {};
+
+        const trafficCtx = document.getElementById('trafficChart').getContext('2d');
+        const protoCtx = document.getElementById('protoChart').getContext('2d');
+
+        const trafficChart = new Chart(trafficCtx, {
+            type: 'line',
+            data: { labels: Array(30).fill(''), datasets: [{ label: 'PPS', data: Array(30).fill(0), borderColor: '#00f3ff', backgroundColor: 'rgba(0, 243, 255, 0.1)', fill: true, tension: 0.4, pointRadius: 0, borderWidth: 1 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#666' } } }, animation: false }
+        });
+
+        const protoKeys = ['HTTP', 'HTTPS', 'DNS', 'SSH', 'TCP', 'UDP', 'ICMP', 'ARP', 'Other'];
+        const protoColors = ['#00ff9d', '#00f3ff', '#ffd700', '#ff9900', '#9d00ff', '#ff0055', '#ffffff', '#aaaaaa', '#444444'];
+        let protoCounts = {}; protoKeys.forEach(k => protoCounts[k] = 0);
+
+        const protoChart = new Chart(protoCtx, {
+            type: 'doughnut',
+            data: { labels: protoKeys, datasets: [{ data: Object.values(protoCounts), backgroundColor: protoColors, borderColor: '#0a0a0f', borderWidth: 1 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { color: '#ccc', font: { family: 'Orbitron', size: 9 }, boxWidth: 8, padding: 8 } } }, layout: { padding: 0 } }
+        });
+
+        // --- DATA & WEBSOCKET LOGIC ---
+        let socket;
+        let packetCount = 0; let threatCount = 0; let pps = 0;
+        let recordedIPs = new Set(); 
+        let recordedAbuseIPs = new Set();
+        let loggedAbuseAlertIPs = new Set();
+        let isCapturing = false;
+
+        setInterval(() => {
+            trafficChart.data.datasets[0].data.push(pps);
+            trafficChart.data.datasets[0].data.shift();
+            trafficChart.update();
+            pps = 0;
+        }, 1000);
+
+        function connect() {
+            const protocol = window.location.protocol === 'https:' ? 'wss://' : 'ws://';
+            socket = new WebSocket(protocol + window.location.host + '/ws/sniff/');
+            socket.onmessage = (e) => {
+                const data = JSON.parse(e.data);
+                if (data.status === 'started') { isCapturing = true; updateUIState(true); }
+                
+                // STOP LOGIC HOOK
+                if (data.status === 'stopped') { 
+                    isCapturing = false; 
+                    updateUIState(false); 
+                    completeStopModal(); 
+                }
+                
+                if (data.status === 'analysis_complete') completeAnalysisAndRedirect(data.redirect_url);
+                if (data.type === 'packet.message' && isCapturing) handlePacket(data);
+            };
+        }
+
+        function handlePacket(pkt) {
+            packetCount++; pps++;
+            document.getElementById('pktCount').innerText = packetCount;
+
+            // Headers Table
+            if (pkt.headers) addHeaderRow(pkt);
+
+            // Charts
+            let p = pkt.proto; if (!protoCounts.hasOwnProperty(p)) p = 'Other';
+            protoCounts[p]++;
+            if (packetCount < 20 || packetCount % 5 === 0) {
+                protoChart.data.datasets[0].data = protoKeys.map(key => protoCounts[key]);
+                protoChart.update();
+            }
+
+            let isRisky = false;
+            // Abuse Logic
+            if (pkt.reputation) {
+                if (pkt.reputation.abuse_score > 0 || !pkt.reputation.is_safe) {
+                    isRisky = true;
+                    if (!loggedAbuseAlertIPs.has(pkt.reputation.ip)) {
+                        threatCount++;
+                        document.getElementById('threatCount').innerText = threatCount;
+                        logAlert(pkt, 'abuse');
+                        loggedAbuseAlertIPs.add(pkt.reputation.ip);
+                    }
+                }
+                if (pkt.reputation.ip && !recordedIPs.has(pkt.reputation.ip)) {
+                    recordedIPs.add(pkt.reputation.ip); addWhoisRow(pkt.reputation);
+                }
+                if (pkt.reputation.ip && !recordedAbuseIPs.has(pkt.reputation.ip)) {
+                    recordedAbuseIPs.add(pkt.reputation.ip);
+                    addAbuseReports(pkt.reputation.ip, pkt.reputation.reports, pkt.reputation.abuse_score, pkt.reputation.is_safe);
+                }
+            }
+            // Threat Logic
+            if (pkt.threat) {
+                if (pkt.severity !== 'INFO' && pkt.threat.sid !== 'INFO-000') {
+                    isRisky = true; threatCount++;
+                    document.getElementById('threatCount').innerText = threatCount;
+                    logAlert(pkt, 'ids');
+                }
+            }
+            // Map Logic
+            let mainIp = pkt.src || (pkt.reputation ? pkt.reputation.ip : null) || pkt.ip || pkt.client_ip || "Unknown IP";
+            if (pkt.geo_src && (Math.abs(pkt.geo_src.lat) > 0.1 || Math.abs(pkt.geo_src.lon) > 0.1)) addMarker(pkt.geo_src, isRisky, mainIp);
+            if (pkt.geo_batch) pkt.geo_batch.forEach(geo => { if (Math.abs(geo.lat) > 0.1) addMarker(geo, isRisky, geo.ip || "Batch IP"); });
+        }
+
+        function addMarker(geo, isRisky, ip) {
+            if (!geo || !geo.lat) return;
+            const key = ip !== "Unknown IP" ? ip : `${geo.city}-${geo.country}`;
+            const color = isRisky ? '#ff0055' : '#00f3ff';
+            const popupContent = `<div style="font-family:'Orbitron'; color:${color}; font-weight:bold; border-bottom:1px solid rgba(255,255,255,0.2);">${ip}</div><div style="color:#ccc; font-size:0.85rem;">${geo.city||'?'}, ${geo.country||'?'}</div>`;
+            
+            if (!markers[key]) {
+                markers[key] = L.circleMarker([geo.lat, geo.lon], { radius: 6, color: color, fillColor: color, fillOpacity: 0.7 }).addTo(map).bindPopup(popupContent);
+                const ping = L.circleMarker([geo.lat, geo.lon], { radius: 2, color: color, fillOpacity: 0, weight: 3 }).addTo(map);
+                let r = 2; const anim = setInterval(() => { r += 3; ping.setRadius(r); ping.setStyle({ opacity: 1 - (r/30) }); if(r > 30) { clearInterval(anim); map.removeLayer(ping); } }, 40);
+            } else {
+                const el = markers[key].getElement();
+                if(el) { el.style.fill = '#fff'; setTimeout(() => el.style.fill = color, 150); }
+            }
+        }
+
+        function addHeaderRow(pkt) {
+            const now = new Date();
+            let prettyHeaders = "";
+            if (pkt.headers) for (const [key, value] of Object.entries(pkt.headers)) prettyHeaders += `${key}: ${value}\n`;
+            
+            if (pkt.direction === 'inbound') {
+                const tbody = document.getElementById('incomingHeadersTable').querySelector('tbody');
+                const row = document.createElement('tr');
+                const statusColor = (pkt.status_code >= 400) ? 'var(--cyber-red)' : 'var(--cyber-green)';
+                const contentType = (pkt.headers && (pkt.headers['Content-Type'] || pkt.headers['content-type'])) || '-';
+                
+                row.innerHTML = `<td style="color:#888;">${now.toLocaleTimeString()}</td><td style="color:${statusColor}; font-weight:bold;">${pkt.status_code || '200'}</td><td>${pkt.host || '-'}</td><td class="wrap-text" style="color:#aaa;">${contentType}</td><td><button class="cyber-btn" style="padding:4px;" onclick="showHeadersModal('${encodeURIComponent(prettyHeaders)}')">VIEW</button></td>`;
+                tbody.prepend(row);
+                if (tbody.children.length > 30) tbody.lastChild.remove();
+            } else {
+                const tbody = document.getElementById('headersTable').querySelector('tbody');
+                const row = document.createElement('tr');
+                row.innerHTML = `<td style="color:#888;">${now.toLocaleTimeString()}</td><td style="color:var(--cyber-blue); font-weight:bold;">${pkt.method || 'GET'}</td><td>${pkt.host || '-'}</td><td class="wrap-text" style="color:#aaa;">${pkt.url || '-'}</td><td><button class="cyber-btn" style="padding:4px;" onclick="showHeadersModal('${encodeURIComponent(prettyHeaders)}')">VIEW</button></td>`;
+                tbody.prepend(row);
+                if (tbody.children.length > 30) tbody.lastChild.remove();
+            }
+        }
+
+        function showHeadersModal(h) { document.getElementById('headersContent').innerText = decodeURIComponent(h); document.getElementById('headersModal').style.display = 'flex'; }
+        function closeHeadersModal() { document.getElementById('headersModal').style.display = 'none'; }
+        function showPayload(m, s, p) { document.getElementById('payloadAlertMsg').innerText = decodeURIComponent(m); document.getElementById('payloadSid').innerText = s; document.getElementById('payloadContent').innerText = decodeURIComponent(p); document.getElementById('payloadModal').style.display = 'flex'; }
+        function closePayloadModal() { document.getElementById('payloadModal').style.display = 'none'; }
+
+        function logAlert(pkt, type) {
+            const feed = document.getElementById('logFeed');
+            const div = document.createElement('div');
+            
+            if (type === 'abuse') {
+                const score = pkt.reputation.abuse_score || 0;
+                let className = score > 40 ? 'log-item threat' : (score >= 15 ? 'log-item warn' : 'log-item neutral');
+                let color = score > 40 ? 'var(--cyber-red)' : (score >= 15 ? 'var(--cyber-warn)' : 'var(--cyber-grey)');
+                div.className = className;
+                
+                div.innerHTML = `
+                    <div class="log-content" style="display:block;">
+                        <div style="display:flex; gap:10px; align-items:flex-start;">
+                            <div class="log-icon"><i class="fas fa-biohazard" style="color:${color}"></i></div>
+                            <div style="flex:1;">
+                                <span class="log-msg" style="font-size:0.9rem;">Abuse Score: ${score}%</span>
+                                <div class="log-meta" style="font-size: 0.8rem; color: #e0e0e0; font-weight: bold; margin-top: 6px; letter-spacing: 0.5px;">
+                                    IP: <span style="color: #fff;">${pkt.reputation.ip}</span>
+                                    <span style="color:#666; margin:0 5px;">|</span>
+                                    ORG: <span style="color:var(--cyber-blue);">${pkt.reputation.org}</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>`;
+            
+            } else {
+                div.className = 'log-item threat';
+                let btn = pkt.threat.payload ? `<button class="cyber-btn" style="padding:2px 6px; font-size:0.6rem; width:auto; margin-left:auto;" onclick="showPayload('${encodeURIComponent(pkt.threat.msg)}','${pkt.threat.sid}','${encodeURIComponent(pkt.threat.payload)}')">INSPECT</button>` : '';
+                
+                div.innerHTML = `
+                    <div class="log-content" style="display:block;">
+                        <div style="display:flex; gap:10px; align-items:flex-start;">
+                            <div class="log-icon"><i class="fas fa-exclamation-triangle" style="color:var(--cyber-red)"></i></div>
+                            <div style="flex:1;">
+                                <span class="log-msg" style="font-size:0.9rem;">${pkt.threat.msg}</span>
+                                <div class="log-meta" style="font-size: 0.8rem; color: #e0e0e0; font-weight: bold; margin-top: 6px; letter-spacing: 0.5px;">
+                                    SRC: <span style="color:#fff;">${pkt.src}</span> <i class="fas fa-arrow-right" style="color:var(--cyber-blue); font-size:0.7rem;"></i> DST: <span style="color:#fff;">${pkt.dst}</span> | <span style="color:var(--cyber-blue);">${pkt.proto}</span> | SID: <span style="color:var(--cyber-warn);">${pkt.threat.sid}</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div style="text-align:right; margin-top:5px;">${btn}</div>
+                    </div>`;
+            }
+            feed.prepend(div);
+            if (feed.children.length > 500) feed.lastChild.remove();
+        }
+
+        function addWhoisRow(rep) {
+            const tbody = document.getElementById('whoisTable').querySelector('tbody');
+            const row = document.createElement('tr');
+            row.innerHTML = `<td style="color:var(--cyber-blue); font-weight:bold;">${rep.ip}</td><td class="wrap-text">${rep.org||'N/A'}</td><td>${(rep.whois||{}).registrar||'N/A'}</td><td>${((rep.whois||{}).creation_date||'N/A').substring(0,10)}</td>`;
+            tbody.prepend(row);
+            if (tbody.children.length > 50) tbody.lastChild.remove();
+        }
+
+        function addAbuseReports(ip, reports, score, isSafe) {
+            const tbody = document.getElementById('abuseTable').querySelector('tbody');
+            if (reports && reports.length > 0) {
+                reports.slice(0, 2).forEach(r => {
+                    const row = document.createElement('tr');
+                    let color = score > 40 ? 'var(--cyber-red)' : (score >= 15 ? 'var(--cyber-warn)' : 'var(--cyber-grey)');
+                    row.innerHTML = `<td style="color:${color}; font-weight:bold;">${ip}</td><td>${(r.reportedAt||'').substring(0,10)}</td><td class="wrap-text" style="color:#ddd;">"${r.comment||''}"</td><td>${r.reporterId}</td>`;
+                    tbody.prepend(row);
+                });
+            } else {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td style="color:var(--cyber-green); font-weight:bold;">${ip}</td><td>Now</td><td class="wrap-text" style="color:#ddd;"><div style="display:flex; align-items:center; gap:8px;"><i class="fas fa-check-circle" style="color:var(--cyber-green);"></i> Verified Safe</div></td><td>AbuseIPDB</td>`;
+                tbody.prepend(row);
+            }
+            while (tbody.children.length > 50) tbody.lastChild.remove();
+        }
+
+        function updateUIState(running) {
+            const txt = document.getElementById('statusText'); const dot = document.getElementById('statusDot'); const btn = document.getElementById('analyzeBtn');
+            if(running) { txt.innerText="ACTIVE"; txt.style.color="var(--cyber-green)"; dot.style.background="var(--cyber-green)"; dot.style.boxShadow="0 0 10px var(--cyber-green)"; btn.disabled=false; }
+            else { txt.innerText="OFFLINE"; txt.style.color="#666"; dot.style.background="#666"; dot.style.boxShadow="none"; }
+        }
+
+        // --- MOCK MODALS (Analysis & Stop) ---
+        let analysisInterval;
+        function showAnalysisModal() { document.getElementById('analysisModal').style.display='flex'; let w=0; analysisInterval=setInterval(()=>{ if(w<90) document.getElementById('progressBar').style.width=(w+=Math.random()*5)+'%'; },200); }
+        function completeAnalysisAndRedirect(url) { clearInterval(analysisInterval); document.getElementById('progressBar').style.width='100%'; setTimeout(()=>window.location.href=url,800); }
+
+        let stopInterval;
+        function showStopModal() { 
+            document.getElementById('stopModal').style.display='flex'; 
+            let w=0; 
+            stopInterval=setInterval(()=>{ if(w<90) document.getElementById('stopProgressBar').style.width=(w+=Math.random()*15)+'%'; },100); 
+        }
+        function completeStopModal() { 
+            clearInterval(stopInterval); 
+            document.getElementById('stopProgressBar').style.width='100%'; 
+            setTimeout(()=>{ 
+                document.getElementById('stopModal').style.display='none'; 
+                document.getElementById('stopProgressBar').style.width='0%'; 
+            }, 600); 
+        }
+
+        // --- BUTTON EVENTS ---
+        connect();
+        document.getElementById('startBtn').onclick = () => {
+            packetCount=0; threatCount=0; pps=0; 
+            recordedIPs.clear(); 
+            recordedAbuseIPs.clear(); 
+            loggedAbuseAlertIPs.clear(); 
+            
+            document.getElementById('pktCount').innerText="0"; document.getElementById('threatCount').innerText="0";
+            document.querySelectorAll('tbody').forEach(b=>b.innerHTML="");
+            const bpf=document.getElementById('bpf').value; const iface=document.getElementById('iface').value;
+            socket.send(JSON.stringify({action:'start', bpf, iface}));
+        };
+        
+        document.getElementById('stopBtn').onclick = () => {
+            showStopModal();
+            socket.send(JSON.stringify({action:'stop'}));
+        };
+        
+        document.getElementById('analyzeBtn').onclick = () => { 
+            socket.send(JSON.stringify({action:'analyze'})); 
+            showAnalysisModal(); 
+        };
+   </script>
+</body>
+</html>
