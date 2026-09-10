@@ -1,0 +1,54 @@
+# ----------------------------------------------------------------------------
+# NETPULSE WAF - STRICT RULES (High Fidelity Only)
+# ----------------------------------------------------------------------------
+
+# ============================================================================
+# 1. WEB APPLICATION ATTACKS
+# ============================================================================
+
+# --- SQL INJECTION (Expanded) ---
+alert tcp any any -> any any (msg:"ET WEB-ATTACK SQL Injection (UNION SELECT)"; pcre:"/union\s+(all\s+)?select/is"; sid:10001;)
+alert tcp any any -> any any (msg:"ET WEB-ATTACK SQL Injection (DB Recon)"; pcre:"/(@@version|user\(\)|system_user\(\)|@@datadir)/is"; sid:10004;)
+alert tcp any any -> any any (msg:"ET WEB-ATTACK Blind SQL Injection (Time-Based)"; pcre:"/(sleep|benchmark)\s*\(\s*\d+\s*\)/is"; sid:10012;)
+alert tcp any any -> any any (msg:"Test SQLi Detected"; content:"OR 1=1"; sid:999999; rev:1;)
+# --- XSS (Cross Site Scripting) ---
+alert tcp any any -> any any (msg:"ET WEB-ATTACK XSS (Javascript URI)"; pcre:"/javascript\s*:/is"; sid:10014;)
+alert tcp any any -> any any (msg:"ET WEB-ATTACK XSS (Alert Pop-up)"; pcre:"/alert\s*\(/is"; sid:10015;)
+
+# --- REMOTE COMMAND EXECUTION (RCE) ---
+alert tcp any any -> any any (msg:"ET WEB-ATTACK RCE (Command Chaining)"; pcre:"/[\x3B&|]\s*(wget|curl|nc|netcat|bash|sh|whoami|id|uname)\s+/is"; sid:10008;)
+alert tcp any any -> any any (msg:"ET WEB-ATTACK LFI (/etc/passwd)"; pcre:"/etc\/passwd/s"; sid:10009;)
+alert tcp any any -> any any (msg:"ET WEB-ATTACK Directory Traversal"; pcre:"/\.\.\/\.\./"; sid:10010;)
+alert tcp any any -> any any (msg:"ET EXPLOIT Apache Log4j RCE Detected"; content:"${jndi:"; sid:10017;)
+
+# --- WEBSHELLS ---
+alert tcp any any -> any any (msg:"ET WEB-ATTACK PHP Webshell Activity"; pcre:"/(shell_exec|passthru|system|phpinfo|eval|proc_open)\s*\(/is"; sid:10011;)
+
+# --- SENSITIVE FILE EXPOSURE ---
+alert tcp any any -> any any (msg:"ET INFO Sensitive File Access (.env)"; content:".env"; sid:10018;)
+alert tcp any any -> any any (msg:"ET INFO Git Repository Access (.git/config)"; content:".git/config"; sid:10019;)
+alert tcp any any -> any any (msg:"ET INFO SSH Key Access (id_rsa)"; content:"id_rsa"; sid:10020;)
+alert tcp any any -> any any (msg:"ET INFO Cloud Metadata Service Attempt"; content:"169.254.169.254"; sid:10021;)
+
+# ============================================================================
+# 2. SCANNER & BOT DETECTION
+# ============================================================================
+alert tcp any any -> any any (msg:"ET SCAN Nmap Scripting Engine Detected"; content:"Nmap Scripting Engine"; sid:20001;)
+alert tcp any any -> any any (msg:"ET SCAN Nmap User-Agent (Generic)"; pcre:"/User-Agent:.*Nmap/is"; sid:20002;)
+alert tcp any any -> any any (msg:"ET SCAN Masscan Port Scanner"; content:"masscan"; sid:20006;)
+alert tcp any any -> any any (msg:"ET SCAN ZMap Detected"; content:"zmap"; sid:20007;)
+alert tcp any any -> any any (msg:"ET SCAN Nikto Web Scanner"; content:"Nikto"; sid:20003;)
+alert tcp any any -> any any (msg:"ET SCAN SQLMap Automated Scan"; content:"sqlmap"; sid:20004;)
+alert tcp any any -> any any (msg:"ET SCAN Directory Brute Force (Gobuster)"; content:"gobuster"; sid:20005;)
+alert tcp any any -> any any (msg:"ET SCAN Burp Suite Detected"; content:"Burp Suite"; sid:20008;)
+alert tcp any any -> any any (msg:"ET SCAN OWASP ZAP Detected"; content:"ZAP/"; sid:20009;)
+alert tcp any any -> any any (msg:"ET SCAN OpenVAS Detected"; content:"OpenVAS"; sid:20010;)
+alert tcp any any -> any any (msg:"ET SCAN Nessus Vulnerability Scanner"; content:"Nessus"; sid:20011;)
+alert tcp any any -> any any (msg:"ET SCAN THC-Hydra Brute Force"; content:"Hydra"; sid:20013;)
+alert tcp any any -> any any (msg:"ET SCAN Medusa Brute Force"; content:"Medusa"; sid:20014;)
+
+# ============================================================================
+# 3. PROTOCOL ANOMALIES
+# ============================================================================
+alert tcp any any -> any any (msg:"ET POLICY Suspicious Empty User-Agent"; pcre:"/User-Agent:\s*$/m"; sid:30002;)
+alert icmp any any -> any any (msg:"TEST: Snort is Working (Ping Detected)"; sid:99999; rev:1;)

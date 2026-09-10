@@ -1,0 +1,37 @@
+# ----------------------------------------------------------------------------
+# NETPULSE - FINAL ROBUST RULES (Encoding Aware)
+# ----------------------------------------------------------------------------
+# Changes:
+# 1. Added PCRE (Regex) to match BOTH plain text and URL-encoded text.
+#    Example: Matches "1=1" AND "1%3D1"
+#    Example: Matches "<script" AND "%3Cscript"
+# 2. Kept 'flow:to_server' to prevent server response false positives.
+# 3. Kept 'threshold' to prevent duplicate alerts.
+
+# 2. SQL Injection (Encoding Aware)
+# Matches "UNION" followed by "SELECT" (Case insensitive, handles %20 as space)
+alert tcp any any -> any any (msg:"ET WEB-ATTACK SQL Injection (UNION SELECT)"; flow:to_server; pcre:"/UNION.+SELECT/ik"; threshold: type limit, track by_src, count 1, seconds 5; sid:2000001; rev:5;)
+
+# Matches "1=1" OR "1%3D1" (The \x3d is hex for =)
+alert tcp any any -> any any (msg:"ET WEB-ATTACK SQL Injection (Test 1=1)"; flow:to_server; pcre:"/1(=|%3D)1/i"; threshold: type limit, track by_src, count 1, seconds 5; sid:2000003; rev:5;)
+
+# Matches " OR " surrounded by spaces, +, or %20
+alert tcp any any -> any any (msg:"ET WEB-ATTACK SQL Injection (OR Statement)"; flow:to_server; pcre:"/[\s\+%20]OR[\s\+%20]/i"; threshold: type limit, track by_src, count 1, seconds 5; sid:2000004; rev:5;)
+
+# 3. XSS (Encoding Aware)
+# Matches "<script" OR "%3Cscript" (The \x3c is hex for <)
+alert tcp any any -> any any (msg:"ET WEB-ATTACK XSS Script Tag"; flow:to_server; pcre:"/(<|%3C)script/i"; threshold: type limit, track by_src, count 1, seconds 5; sid:2000010; rev:5;)
+
+# Matches "javascript:" (The colon might be encoded as %3A)
+alert tcp any any -> any any (msg:"ET WEB-ATTACK XSS Javascript URI"; flow:to_server; pcre:"/javascript(:|%3A)/i"; threshold: type limit, track by_src, count 1, seconds 5; sid:2000011; rev:5;)
+
+# 4. /etc/passwd (Encoding Aware)
+# Matches /etc/passwd OR %2Fetc%2Fpasswd
+alert tcp any any -> any any (msg:"ET WEB-ATTACK Password File Access"; flow:to_server; pcre:"/(\/|%2F)etc(\/|%2F)passwd/i"; threshold: type limit, track by_src, count 1, seconds 5; sid:2000021; rev:5;)
+
+# 5. RCE / Command Injection
+alert tcp any any -> any any (msg:"ET WEB-ATTACK Command Execution (whoami)"; flow:to_server; content:"whoami"; fast_pattern; threshold: type limit, track by_src, count 1, seconds 5; sid:2000031; rev:5;)
+
+# 6. Scanners
+alert tcp any any -> any any (msg:"ET SCAN Nmap User-Agent"; flow:to_server; content:"Nmap"; threshold: type limit, track by_src, count 1, seconds 60; sid:2000040; rev:5;)
+alert tcp any any -> any any (msg:"ET SCAN Nikto Scan"; flow:to_server; content:"Nikto"; threshold: type limit, track by_src, count 1, seconds 60; sid:2000041; rev:5;)
