@@ -1,0 +1,197 @@
+/*
+ * Updated CSS for NETPULSE Home Page
+ * Theme: Dark, Professional, Neon Accent (Blue/Teal)
+ */
+
+/* 1. Global Reset & Typography */
+* {
+    margin: 0;
+    padding: 0;
+    font-family: 'Roboto', sans-serif; /* Using a clean, professional font */
+    box-sizing: border-box; /* Ensures padding and border are inside the element's total width and height */
+}
+
+/* Import Font (optional, include in HTML <head> for best practice) */
+/* @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap'); */
+
+/* 2. Body and Banner Background */
+/* Using a deep dark blue/black background color as a base */
+body {
+    background-color: #0d1117; 
+    height: 100vh;
+}
+
+.banner {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    overflow: hidden;
+    /* Set the background image and its properties directly on .banner for cleaner overlay management */
+    background-image: url('/static/images/home_background.jpg');
+    background-size: cover; 
+    background-position: center; 
+    background-repeat: no-repeat;
+}
+
+/* Dark Overlay with Neon Accent Color (Overlay is now managed by ::before) */
+.banner::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    /* Stronger dark overlay */
+    background: rgba(0, 0, 0, 0.85); 
+    /* Subtle blue/black gradient can be used instead of pure black overlay */
+    /* background: linear-gradient(rgba(13, 17, 23, 0.85), rgba(13, 17, 23, 0.85)); */
+    z-index: 0; /* Changed to 0 to keep content above */
+}
+
+/* Ensure content and navbar appear above the overlay */
+.navbar,
+.content {
+    position: relative;
+    z-index: 10;
+}
+
+/* 3. Navigation Bar Styling */
+
+/* Use a clean width and spacing */
+.navbar {
+    width: 90%;
+    max-width: 1200px;
+    margin: auto;
+    padding: 30px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+/* Brand Name Style */
+.pstyle { 
+    color: #58a6ff; /* Neon Blue/Teal accent for the brand name */
+    font-size: 28px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.navbar ul {
+    list-style: none;
+    display: flex; /* Ensure list items are lined up */
+}
+
+.navbar ul li {
+    margin: 0 25px;
+    position: relative;
+}
+
+.navbar ul li a {
+    text-decoration: none;
+    color: #c9d1d9; /* Light gray for links */
+    text-transform: uppercase;
+    font-size: 14px;
+    font-weight: 500;
+    transition: color 0.3s;
+}
+
+/* Neon Underline Effect */
+.navbar ul li::after {
+    content: '';
+    height: 2px; /* Thinner line */
+    width: 0%;
+    background: #58a6ff; /* Neon Blue */
+    position: absolute;
+    left: 0;
+    bottom: -8px; /* Position slightly lower */
+    transition: 0.5s;
+}
+
+.navbar ul li:hover a {
+    color: #ffffff; /* Brighter white on hover */
+}
+
+.navbar ul li:hover::after {
+    width: 100%;
+}
+
+/* 4. Content Area (Hero Text and Buttons) */
+
+.content {
+    position: absolute;
+    width: 100%;
+    top: 50%;
+    transform: translateY(-50%);
+    text-align: center;
+    color: #fff;
+    padding: 0 20px;
+}
+
+.content h1 {
+    font-size: 68px;
+    margin-top: 0; /* Resetting margin-top for better vertical centering */
+    font-weight: 700;
+    text-shadow: 0 0 15px rgba(88, 166, 255, 0.4); /* Subtle neon glow */
+    margin-bottom: 20px;
+}
+
+.content p {
+    margin: 15px auto 40px;
+    font-weight: 300;
+    line-height: 28px;
+    font-size: 18px;
+    color: #c9d1d9;
+    max-width: 600px;
+}
+
+/* 5. Button Styling */
+
+.content button,
+.content a button {
+    width: 220px; /* Slightly wider */
+    padding: 14px 0;
+    margin: 15px 12px;
+    border-radius: 30px; /* More rounded */
+    font-weight: 500;
+    font-size: 16px;
+    /* Primary button style: Transparent background, Neon border */
+    border: 2px solid #58a6ff; 
+    background: transparent;
+    color: #fff;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    transition: all 0.3s ease;
+}
+
+.content button:focus {
+    outline: none;
+}
+
+/* Button hover fill span (the neon effect) */
+button span {
+    background: #58a6ff; /* Neon fill color */
+    height: 100%;
+    width: 0;
+    border-radius: 30px;
+    position: absolute;
+    left: 0;
+    bottom: 0;
+    z-index: -1;
+    transition: 0.5s;
+}
+
+button:hover span {
+    width: 100%;
+}
+
+/* Final Button Look on Hover */
+button:hover {
+    border: 2px solid #58a6ff; /* Keep the border color even after filling for consistency */
+    color: #0d1117; /* Dark text on neon fill */
+    /* Add a slight glow on the entire button hover */
+    box-shadow: 0 0 10px rgba(88, 166, 255, 0.5);
+}

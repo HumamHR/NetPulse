@@ -1,0 +1,198 @@
+/* Main Container */
+.pcap-results-container {
+  padding: 2rem 0;
+  background-color: #f8f9fa;
+  min-height: 100vh;
+}
+
+/* Header Styles */
+.results-header {
+  padding: 2rem 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.results-header h1 {
+  color: #2c3e50;
+  font-weight: 700;
+}
+
+/* Card Styles */
+.card {
+  border: none;
+  border-radius: 0.5rem;
+  box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+  margin-bottom: 1.5rem;
+}
+
+.card-header {
+  background-color: #2c3e50;
+  color: white;
+  border-radius: 0.5rem 0.5rem 0 0 !important;
+  padding: 1rem 1.5rem;
+}
+
+.card-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+}
+
+/* Stat Items */
+.stat-item {
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background-color: #f8f9fa;
+  border-radius: 0.25rem;
+}
+
+.stat-label {
+  font-weight: 600;
+  color: #495057;
+  margin-right: 0.5rem;
+}
+
+.stat-value {
+  font-weight: 700;
+  color: #2c3e50;
+}
+
+/* IP Address Styles */
+.ip-addresses {
+  display: flex;
+  gap: 1.5rem;
+}
+
+.ip-group {
+  flex: 1;
+}
+
+.ip-group h5 {
+  color: #6c757d;
+  margin-bottom: 0.75rem;
+}
+
+.ip-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ip-list li {
+  margin-bottom: 0.5rem;
+}
+
+/* Protocol Chart */
+.protocol-chart {
+  margin-top: 1rem;
+}
+
+.protocol-item {
+  margin-bottom: 0.75rem;
+}
+
+.protocol-name {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 600;
+}
+
+/* Packet Details */
+.packet-details {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 0.25rem;
+}
+
+.detail-row {
+  display: flex;
+  margin-bottom: 0.5rem;
+}
+
+.detail-label {
+  font-weight: 600;
+  color: #495057;
+  min-width: 120px;
+}
+
+.detail-value {
+  color: #2c3e50;
+}
+
+/* Raw Output */
+.raw-output {
+  background-color: #f8f9fa;
+  padding: 1rem;
+  border-radius: 0.25rem;
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+}
+
+/* Action Buttons */
+.action-buttons {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #dee2e6;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+  .ip-addresses {
+      flex-direction: column;
+      gap: 1rem;
+  }
+  
+  .stat-item {
+      padding: 0.5rem;
+  }
+  
+  .results-header h1 {
+      font-size: 2rem;
+  }
+}
+.chart-container {
+  position: relative;
+  height: 400px;
+  width: 100%;
+  margin-bottom: 20px;
+}
+.hidden {
+  display: none !important;
+}
+
+/* Credentials Table Styles */
+.credentials-container {
+  margin-top: 20px;
+  background: #2d3748;
+  border-radius: 8px;
+  padding: 20px;
+  overflow-x: auto;
+}
+
+.credentials-table {
+  width: 100%;
+  border-collapse: collapse;
+  color: white;
+}
+
+.credentials-table th {
+  background-color: rgba(77, 140, 255, 0.2);
+  padding: 12px 15px;
+  text-align: left;
+}
+
+.credentials-table td {
+  padding: 10px 15px;
+  border-bottom: 1px solid rgba(77, 140, 255, 0.1);
+  word-break: break-all;
+}
+
+.credentials-table tr:hover {
+  background-color: rgba(77, 140, 255, 0.1);
+}
+
+/* Highlight sensitive data */
+.credentials-table td:nth-child(2) {
+  color: #ff6b6b;
+  font-weight: 500;
+}
