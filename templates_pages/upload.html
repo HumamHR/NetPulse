@@ -1,0 +1,404 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NETPULSE | PCAP Analysis</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        /* --- CORE THEME (From Index) --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --cyber-blue: #00f3ff;
+            --cyber-purple: #9d00ff;
+            --cyber-dark: #0a0a0f;
+            --cyber-darker: #05050a;
+            --cyber-gray: #1a1a2e;
+            --cyber-light: #e6e6e6;
+            --cyber-green: #00ff9d;
+            --cyber-red: #ff0055;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--cyber-darker);
+            color: var(--cyber-light);
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- BACKGROUND EFFECTS --- */
+        .cyber-effects {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 1;
+        }
+        .scan-line {
+            position: absolute; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent);
+            top: 0; animation: scan 3s linear infinite; opacity: 0.3;
+        }
+        .grid-overlay {
+            position: absolute; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px; opacity: 0.2;
+        }
+        .data-point {
+            position: absolute; width: 4px; height: 4px; background: var(--cyber-blue);
+            border-radius: 50%; animation: pulse 2s infinite; opacity: 0.5;
+        }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.5); opacity: 1; } }
+
+        /* --- HEADER & NAV --- */
+        .cyber-header {
+            background: linear-gradient(135deg, var(--cyber-darker) 0%, var(--cyber-gray) 50%, var(--cyber-darker) 100%);
+            position: relative; z-index: 5000; overflow: visible;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 2; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+        .logo-container { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { font-size: 2rem; color: var(--cyber-blue); text-shadow: 0 0 10px var(--cyber-blue); }
+        .logo-text {
+            font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 700;
+            background: linear-gradient(45deg, var(--cyber-blue), var(--cyber-purple));
+            -webkit-background-clip: text; -moz-background-clip: text; background-clip: text;
+            color: transparent;
+        }
+        .nav-list { display: flex; list-style: none; gap: 30px; align-items: center; }
+        .nav-link {
+            color: var(--cyber-light); text-decoration: none; font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem; padding: 10px 15px; border-radius: 4px; transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-link:hover, .nav-link.active { color: var(--cyber-blue); background: rgba(0, 243, 255, 0.1); }
+        
+        /* Dropdown */
+        .nav-item.dropdown { position: relative; cursor: pointer; }
+        .dropdown-menu {
+            display: none; position: absolute; top: 100%; margin-top: -5px; left: 0;
+            background: var(--cyber-darker); border: 1px solid var(--cyber-blue);
+            min-width: 240px; z-index: 10000; padding: 10px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .dropdown-menu::before { content: ""; position: absolute; top: -20px; left: 0; width: 100%; height: 20px; }
+        .nav-item.dropdown:hover .dropdown-menu { display: block; animation: fadeIn 0.2s ease-in-out; }
+        .dropdown-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+            color: var(--cyber-light); text-decoration: none; font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem; transition: all 0.2s; border-left: 3px solid transparent;
+        }
+        .dropdown-item:hover { background: rgba(0, 243, 255, 0.05); color: var(--cyber-blue); border-left: 3px solid var(--cyber-blue); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- PCAP UPLOAD SPECIFIC STYLES --- */
+        .upload-section { padding: 80px 0; position: relative; z-index: 2; flex: 1; }
+        
+        .section-header { text-align: center; margin-bottom: 50px; }
+        .section-title {
+            font-family: 'Orbitron', sans-serif; font-size: 2.5rem; color: var(--cyber-light);
+            margin-bottom: 15px; display: inline-block; position: relative;
+        }
+        .section-title::after {
+            content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+            width: 100px; height: 3px; background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent);
+        }
+        .subtitle { color: #a0a0c0; max-width: 600px; margin: 0 auto; line-height: 1.6; }
+
+        /* Upload Panel (Glassmorphism) */
+        .upload-panel {
+            background: var(--cyber-gray);
+            border: 1px solid rgba(0, 243, 255, 0.1);
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+            max-width: 700px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            transition: transform 0.3s;
+        }
+        .upload-panel:hover { border-color: rgba(0, 243, 255, 0.3); }
+        .upload-panel::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue));
+        }
+
+        /* Upload Box */
+        .upload-box {
+            border: 2px dashed rgba(0, 243, 255, 0.3);
+            border-radius: 10px;
+            padding: 40px;
+            text-align: center;
+            margin-bottom: 25px;
+            background: rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        .upload-box:hover {
+            background: rgba(0, 243, 255, 0.05);
+            border-color: var(--cyber-blue);
+        }
+
+        /* Input & Labels */
+        input[type="file"] { display: none; }
+        
+        .custom-file-upload {
+            display: inline-block;
+            padding: 15px 40px;
+            background: rgba(0, 243, 255, 0.1);
+            color: var(--cyber-blue);
+            border: 1px solid var(--cyber-blue);
+            border-radius: 5px;
+            font-family: 'Orbitron', sans-serif;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 1rem;
+        }
+        .custom-file-upload:hover {
+            background: var(--cyber-blue);
+            color: black;
+            box-shadow: 0 0 20px rgba(0, 243, 255, 0.4);
+        }
+
+        /* File Info Section */
+        .file-info-section {
+            margin-top: 25px;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: none; /* Hidden by default via JS */
+            animation: fadeIn 0.5s ease-out;
+        }
+        .file-name { color: #a0a0c0; font-size: 0.9rem; margin-bottom: 15px; word-break: break-all; }
+        .file-name strong { color: var(--cyber-blue); font-family: 'Orbitron', sans-serif; }
+
+        /* Scan Button */
+        .scan-button {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue));
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .scan-button:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 0 25px rgba(157, 0, 255, 0.5);
+        }
+        .scan-button:disabled {
+            background: #333;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        /* --- POPUP STYLES --- */
+       .popup-overlay {
+    position: fixed; 
+    top: 0; 
+    left: 0; 
+    width: 100%; 
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.85);
+    display: none; /* Hidden by default */
+    justify-content: center; 
+    align-items: center;
+    z-index: 10000; 
+    backdrop-filter: blur(8px);
+    
+    /* ADDED FOR FADE ANIMATION */
+    opacity: 0; 
+    transition: opacity 0.5s ease-in-out;
+}
+
+/* New class to handle visibility */
+.popup-overlay.active {
+    opacity: 1;
+}
+      .popup-box {
+    /* (Keep your existing popup-box styles same as before) */
+    background: var(--cyber-darker);
+    padding: 40px; 
+    border-radius: 10px; 
+    width: 90%; 
+    max-width: 450px;
+    text-align: center; 
+    border: 1px solid var(--cyber-blue);
+    box-shadow: 0 0 50px rgba(0, 243, 255, 0.2);
+    position: relative;
+    
+    /* Optional: Add a subtle scale effect */
+    transform: scale(0.9);
+    transition: transform 0.5s ease;
+}
+.popup-overlay.active .popup-box {
+    transform: scale(1);
+}
+        .popup-header h3 {
+            color: var(--cyber-blue); font-family: 'Orbitron', sans-serif; margin-bottom: 25px;
+            text-transform: uppercase; letter-spacing: 2px;
+        }
+        .progress-container {
+            background: rgba(255, 255, 255, 0.05); border-radius: 20px; padding: 4px;
+            margin: 25px 0; position: relative; height: 24px; border: 1px solid rgba(0, 243, 255, 0.2);
+        }
+        .progress-bar {
+            height: 100%; background: linear-gradient(90deg, var(--cyber-blue), var(--cyber-purple));
+            border-radius: 20px; width: 0%; transition: width 0.3s ease;
+            box-shadow: 0 0 10px rgba(0, 243, 255, 0.5);
+        }
+        .progress-text {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-size: 12px; font-weight: bold; text-shadow: 0 0 5px black;
+        }
+        .status-message { color: #a0a0c0; font-size: 0.9rem; font-style: italic; }
+
+        /* Loading Spinner inside Button */
+        .btn-loading { color: transparent !important; position: relative; }
+        .btn-loading::after {
+            content: ''; position: absolute; width: 20px; height: 20px;
+            top: 50%; left: 50%; margin-left: -10px; margin-top: -10px;
+            border: 2px solid transparent; border-top: 2px solid white;
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Footer */
+        .cyber-footer { background: var(--cyber-darker); padding: 40px 0; margin-top: auto; border-top: 1px solid rgba(0, 243, 255, 0.1); text-align: center; }
+        .copyright { color: #a0a0c0; font-size: 0.9rem; }
+
+        @media (max-width: 768px) {
+            .upload-panel { padding: 25px; width: 95%; }
+        }
+        /* --- CUSTOM SCROLLBAR STYLES --- */
+    html { scrollbar-width: thin; scrollbar-color: var(--cyber-blue) var(--cyber-darker); }
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: var(--cyber-darker); }
+    ::-webkit-scrollbar-thumb { background-color: var(--cyber-blue); border-radius: 5px; border: 2px solid var(--cyber-darker); }
+    ::-webkit-scrollbar-thumb:hover { background-color: var(--cyber-purple); box-shadow: 0 0 10px var(--cyber-blue); }
+    </style>
+</head>
+<body>
+
+    <div class="cyber-effects">
+        <div class="scan-line"></div>
+        <div class="grid-overlay"></div>
+        <div class="data-point" style="top: 20%; left: 10%;"></div>
+        <div class="data-point" style="top: 60%; left: 85%;"></div>
+    </div>
+
+    <div class="cyber-header">
+        <header class="header">
+            <div class="container">
+                <nav class="navbar">
+                    <a class="navbar-brand" href="#">
+                        <div class="logo-container">
+                            <i class="fas fa-satellite-dish logo-icon"></i>
+                            <span class="logo-text">NETPULSE</span>
+                        </div>
+                    </a>
+                    <div class="nav-menu">
+                        <ul class="nav-list">
+                            <li class="nav-item"><a class="nav-link" href="{% url 'index' %}"><i class="fas fa-home"></i> Home</a></li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link active" href="#"><i class="fas fa-tools"></i> Tools <i class="fas fa-chevron-down" style="font-size: 0.8em; margin-left: 5px;"></i></a>
+                                 <div class="dropdown-menu">
+                                    <a href="{% url 'upload' %}" class="dropdown-item"><i class="fas fa-file-code"></i> PCAP Analysis</a>
+                                    <a href="{% url 'sniff_page' %}" class="dropdown-item"><i class="fas fa-broadcast-tower"></i> Live Analysis</a>
+                                    <a href="{% url 'live_dashboard' %}" class="dropdown-item"><i class="fas fa-tachometer-alt"></i> Live Dashboard</a>
+                                    <a href="{% url 'ip_analysis' %}" class="dropdown-item"><i class="fas fa-network-wired"></i> Network Tools</a>
+                                    <a href="{% url 'virus_total' %}" class="dropdown-item"><i class="fas fa-shield-virus"></i> Threat Scanner</a>
+                                    <a href="{% url 'macro_identifier' %}" class="dropdown-item"><i class="fas fa-code"></i> Macro Analyzer</a>
+                                    <a href="{% url 'powershell_analyzer' %}" class="dropdown-item"><i class="fas fa-terminal"></i> PowerShell Analyzer</a>
+                                </div>
+                            </li>
+                            <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-shield-alt"></i> Dashboard</a></li>
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+        </header>
+    </div>
+
+    <main class="upload-section">
+        <div class="container">
+            
+            <div class="section-header" data-aos="fade-down">
+                <h1 class="section-title">
+                    <i class="fas fa-file-contract" style="color: var(--cyber-blue); margin-right: 15px;"></i>
+                    PCAP File Analysis
+                </h1>
+                <p class="subtitle">Upload network capture files (.pcap, .pcapng) for deep packet inspection, threat detection, and flow visualization.</p>
+            </div>
+
+            <div class="upload-panel" data-aos="fade-up">
+                <form id="upload-form" action="{% url 'upload' %}" method="POST" enctype="multipart/form-data">
+                    {% csrf_token %}
+                    
+                    <div class="upload-box">
+                        <label for="pcap-upload" class="custom-file-upload">
+                            <i class="fas fa-cloud-upload-alt" style="margin-right: 10px;"></i> Select Capture File
+                        </label>
+                        <input type="file" id="pcap-upload" name="pcap_file" accept=".pcap,.pcapng" />
+                    </div>
+
+                    <div class="file-info-section" id="file-info-section">
+                        <div class="file-name" id="file-name-display">
+                            <strong>Selected file:</strong> <span id="file-name-text">No file selected</span>
+                        </div>
+                    </div>
+                </form>
+            </div>
+
+        </div>
+    </main>
+
+    <div id="analyzing-popup" class="popup-overlay">
+        <div class="popup-box">
+            <div class="popup-header">
+                <h3><i class="fas fa-cog fa-spin"></i> Analyzing Traffic</h3>
+            </div>
+            <div class="progress-container">
+                <div id="progress-bar" class="progress-bar"></div>
+                <span id="progress-text" class="progress-text">0%</span>
+            </div>
+            <div id="status-message" class="status-message">Initializing engines...</div>
+        </div>
+    </div>
+
+    <footer class="cyber-footer">
+        <div class="container">
+            <p class="copyright">&copy; 2026 NETPULSE. All rights reserved. | Cybersecurity Platform</p>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({ duration: 1000, once: true });
+        
+        // Pass URLs to external JS
+        const UPLOAD_URL = "{% url 'upload' %}";
+        const PCAP_RESULTS_URL = "{% url 'pcap_results' %}";
+    </script>
+    <script src="{% static 'js/custom_script.js' %}"></script>
+</body>
+</html>

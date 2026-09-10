@@ -1,0 +1,570 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NETPULSE | PowerShell Analyzer</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        /* --- CORE THEME --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --cyber-blue: #00f3ff;
+            --cyber-purple: #9d00ff;
+            --cyber-dark: #0a0a0f;
+            --cyber-darker: #05050a;
+            --cyber-gray: #1a1a2e;
+            --cyber-light: #e6e6e6;
+            --cyber-green: #00ff9d;
+            --cyber-red: #ff0055;
+            --cyber-yellow: #ffd700;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--cyber-darker);
+            color: var(--cyber-light);
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- BACKGROUND EFFECTS --- */
+        .cyber-effects { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        .scan-line {
+            position: absolute; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent);
+            top: 0; animation: scan 3s linear infinite; opacity: 0.3;
+        }
+        .grid-overlay {
+            position: absolute; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px; opacity: 0.2;
+        }
+        .data-point {
+            position: absolute; width: 4px; height: 4px; background: var(--cyber-blue);
+            border-radius: 50%; animation: pulse 2s infinite; opacity: 0.5;
+        }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.5); opacity: 1; } }
+
+        /* --- HEADER --- */
+        .cyber-header {
+            background: linear-gradient(135deg, var(--cyber-darker) 0%, var(--cyber-gray) 50%, var(--cyber-darker) 100%);
+            position: relative; z-index: 5000; overflow: visible; border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 2; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+        .logo-container { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { font-size: 2rem; color: var(--cyber-blue); text-shadow: 0 0 10px var(--cyber-blue); }
+        .logo-text {
+            font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 700;
+            background: linear-gradient(45deg, var(--cyber-blue), var(--cyber-purple));
+            -webkit-background-clip: text; -moz-background-clip: text; background-clip: text;
+            color: transparent;
+        }
+        .nav-list { display: flex; list-style: none; gap: 30px; align-items: center; }
+        .nav-link {
+            color: var(--cyber-light); text-decoration: none; font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem; padding: 10px 15px; border-radius: 4px; transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-link:hover, .nav-link.active { color: var(--cyber-blue); background: rgba(0, 243, 255, 0.1); }
+        
+        /* Dropdown */
+        .nav-item.dropdown { position: relative; cursor: pointer; }
+        .dropdown-menu {
+            display: none; position: absolute; top: 100%; margin-top: -5px; left: 0;
+            background: var(--cyber-darker); border: 1px solid var(--cyber-blue);
+            min-width: 240px; z-index: 10000; padding: 10px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .dropdown-menu::before { content: ""; position: absolute; top: -20px; left: 0; width: 100%; height: 20px; }
+        .nav-item.dropdown:hover .dropdown-menu { display: block; animation: fadeIn 0.2s ease-in-out; }
+        .dropdown-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+            color: var(--cyber-light); text-decoration: none; font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem; transition: all 0.2s; border-left: 3px solid transparent;
+        }
+        .dropdown-item:hover { background: rgba(0, 243, 255, 0.05); color: var(--cyber-blue); border-left: 3px solid var(--cyber-blue); }
+
+        /* --- MAIN CONTENT LAYOUT --- */
+        .main-section { padding: 60px 0; position: relative; z-index: 2; flex: 1; }
+        .section-header { text-align: center; margin-bottom: 40px; }
+        .section-title {
+            font-family: 'Orbitron', sans-serif; font-size: 2.5rem; color: var(--cyber-light);
+            margin-bottom: 15px; display: inline-block; position: relative;
+        }
+        .section-title::after {
+            content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+            width: 100px; height: 3px; background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent);
+        }
+
+        /* --- POWERSHELL ANALYZER SPECIFIC STYLES --- */
+        .cyber-panel {
+            background: var(--cyber-gray);
+            border: 1px solid rgba(0, 243, 255, 0.1);
+            border-radius: 15px; padding: 40px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+            position: relative; overflow: hidden;
+            animation: slideUp 0.8s ease-out;
+        }
+        .cyber-panel::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue));
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed rgba(0, 243, 255, 0.3); border-radius: 8px; padding: 40px;
+            text-align: center; margin-bottom: 20px; background: rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+        .upload-area:hover { border-color: var(--cyber-blue); background: rgba(0, 243, 255, 0.05); }
+        .upload-icon { font-size: 3rem; color: var(--cyber-blue); margin-bottom: 15px; }
+        
+        input[type="file"] { display: none; }
+        .file-label {
+            display: inline-block; padding: 12px 30px;
+            background: rgba(0, 243, 255, 0.1); border: 1px solid var(--cyber-blue);
+            color: var(--cyber-blue); font-family: 'Orbitron'; font-size: 0.9rem;
+            cursor: pointer; transition: all 0.3s; border-radius: 4px;
+        }
+        .file-label:hover { background: var(--cyber-blue); color: black; box-shadow: 0 0 15px var(--cyber-blue); }
+        
+        .divider { text-align: center; color: #a0a0c0; margin: 25px 0; font-family: 'Orbitron'; font-size: 0.9rem; }
+
+        /* Code Input */
+        .code-textarea {
+            width: 100%; height: 200px;
+            background: #05050a; border: 1px solid rgba(255,255,255,0.1);
+            color: var(--cyber-green); padding: 15px;
+            font-family: 'Courier New', monospace; font-size: 0.9rem;
+            border-radius: 5px; resize: vertical; transition: all 0.3s;
+        }
+        .code-textarea:focus { outline: none; border-color: var(--cyber-blue); box-shadow: 0 0 10px rgba(0, 243, 255, 0.2); }
+
+        /* Action Buttons */
+        .cyber-btn {
+            font-family: 'Orbitron', sans-serif; width: 100%; padding: 15px;
+            margin-top: 20px; border-radius: 5px; border: none; font-weight: 700;
+            cursor: pointer; transition: all 0.3s; text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .btn-analyze {
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue)); color: white;
+        }
+        .btn-analyze:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 0 20px rgba(0, 243, 255, 0.4); }
+        .btn-analyze:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        /* Results Grid */
+        /* UPDATE: align-items: start ensures columns don't stretch to match height */
+        .results-grid { 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            gap: 30px; 
+            margin-top: 40px; 
+            align-items: start; 
+        }
+        @media(max-width: 900px) { .results-grid { grid-template-columns: 1fr; } }
+
+        .result-card {
+            background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 8px; padding: 25px; 
+            display: flex; flex-direction: column;
+        }
+        
+        .result-header { font-family: 'Orbitron'; color: var(--cyber-blue); border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-bottom: 15px; font-size: 1.1rem; }
+
+        /* Badges & Status */
+        .status-badge { display: inline-block; padding: 8px 16px; border-radius: 4px; font-family: 'Orbitron'; font-size: 0.8rem; margin-bottom: 15px; }
+        .status-safe { background: rgba(0, 255, 157, 0.1); border: 1px solid var(--cyber-green); color: var(--cyber-green); }
+        .status-medium { background: rgba(255, 215, 0, 0.1); border: 1px solid var(--cyber-yellow); color: var(--cyber-yellow); }
+        .status-critical { background: rgba(255, 0, 85, 0.1); border: 1px solid var(--cyber-red); color: var(--cyber-red); }
+
+        .details-list { list-style: none; }
+        .details-list li {
+            background: rgba(0,0,0,0.2); padding: 10px; margin-bottom: 8px;
+            border-left: 2px solid var(--cyber-blue); font-size: 0.9rem; color: #ccc;
+        }
+
+        /* --- UPDATED: SCROLLABLE AREAS --- */
+        
+        /* 1. Threat Box Scrollbar */
+        .threat-box { 
+            margin-top: 20px;
+            max-height: 400px; /* Constrain height */
+            overflow-y: auto;  /* Add scroll */
+            padding-right: 5px;
+        }
+        
+        .threat-item { 
+            background: rgba(255, 255, 255, 0.02); 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-left: 3px solid transparent; 
+            padding: 15px; margin-bottom: 10px; border-radius: 4px;
+            transition: 0.3s;
+        }
+        .threat-item:hover { background: rgba(255, 255, 255, 0.05); }
+        
+        /* Threat Severity Classes */
+        .threat-item.critical { border-left-color: var(--cyber-red); background: rgba(255, 0, 85, 0.05); }
+        .threat-item.medium   { border-left-color: var(--cyber-yellow); background: rgba(255, 215, 0, 0.05); }
+        .threat-item.safe     { border-left-color: var(--cyber-green); background: rgba(0, 255, 157, 0.05); }
+
+        .text-critical { color: var(--cyber-red); }
+        .text-medium   { color: var(--cyber-yellow); }
+        .text-safe     { color: var(--cyber-green); }
+
+        .threat-pattern { font-family: 'Orbitron'; font-size: 0.9rem; color: #fff; font-weight: bold; }
+
+        /* 2. Code Block Scrollbar */
+        .code-block {
+            background: #000; padding: 15px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1);
+            color: #ccc; font-family: 'Courier New'; font-size: 0.85rem; 
+            overflow-x: auto;
+            max-height: 300px; /* Constrain height */
+            overflow-y: auto;  /* Add scroll */
+        }
+
+        /* 3. AI Section Scrollbar */
+        .terminal-box {
+            background: #000; color: var(--cyber-green); font-family: 'Courier New';
+            padding: 20px; border: 1px solid rgba(0, 243, 255, 0.2); border-radius: 4px;
+            min-height: 150px; margin-bottom: 20px; white-space: pre-wrap;
+            max-height: 400px; /* Constrain height */
+            overflow-y: auto;  /* Add scroll */
+        }
+        .btn-ai {
+            background: transparent; border: 1px solid var(--cyber-purple); color: var(--cyber-purple);
+            padding: 12px; border-radius: 4px; cursor: pointer; font-family: 'Orbitron'; transition: 0.3s;
+            display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%;
+        }
+        .btn-ai:hover { background: var(--cyber-purple); color: white; box-shadow: 0 0 15px var(--cyber-purple); }
+
+        /* Loader */
+        .btn-loading { position: relative; color: transparent !important; }
+        .btn-loading::after {
+            content: ''; position: absolute; left: 50%; top: 50%; width: 20px; height: 20px;
+            margin: -10px 0 0 -10px; border: 2px solid white; border-top-color: transparent;
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Custom Scrollbar Styling (Webkit) */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0a0f; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--cyber-blue); }
+
+        /* Footer */
+        .cyber-footer { background: var(--cyber-darker); padding: 40px 0; border-top: 1px solid rgba(0, 243, 255, 0.1); text-align: center; margin-top: auto; }
+        .copyright { color: #a0a0c0; font-size: 0.9rem; }
+
+        /* ===============================
+   GRID OVERFLOW FIX (CRITICAL)
+   =============================== */
+
+/* Allow grid items to shrink */
+.result-card {
+    min-width: 0;
+}
+
+/* Ensure grid never exceeds container */
+.results-grid {
+    width: 100%;
+}
+
+/* Break long PowerShell / Base64 / one-liners */
+.code-block,
+.terminal-box,
+.threat-pattern,
+.details-list li,
+pre {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+}
+/* --- CUSTOM SCROLLBAR STYLES --- */
+    html { scrollbar-width: thin; scrollbar-color: var(--cyber-blue) var(--cyber-darker); }
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: var(--cyber-darker); }
+    ::-webkit-scrollbar-thumb { background-color: var(--cyber-blue); border-radius: 5px; border: 2px solid var(--cyber-darker); }
+    ::-webkit-scrollbar-thumb:hover { background-color: var(--cyber-purple); box-shadow: 0 0 10px var(--cyber-blue); }
+    </style>
+</head>
+<body>
+
+    <div class="cyber-effects">
+        <div class="scan-line"></div>
+        <div class="grid-overlay"></div>
+        <div class="data-point" style="top: 15%; left: 10%;"></div>
+        <div class="data-point" style="top: 70%; left: 85%;"></div>
+    </div>
+
+    <div class="cyber-header">
+        <header class="header">
+            <div class="container">
+                <nav class="navbar">
+                    <a class="navbar-brand" href="#">
+                        <div class="logo-container">
+                            <i class="fas fa-satellite-dish logo-icon"></i>
+                            <span class="logo-text">NETPULSE</span>
+                        </div>
+                    </a>
+                    <div class="nav-menu">
+                        <ul class="nav-list">
+                            <li class="nav-item"><a class="nav-link" href="{% url 'index' %}"><i class="fas fa-home"></i> Home</a></li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link active" href="#"><i class="fas fa-tools"></i> Tools <i class="fas fa-chevron-down" style="font-size: 0.8em; margin-left: 5px;"></i></a>
+                               <div class="dropdown-menu">
+                                    <a href="{% url 'upload' %}" class="dropdown-item"><i class="fas fa-file-code"></i> PCAP Analysis</a>
+                                    <a href="{% url 'sniff_page' %}" class="dropdown-item"><i class="fas fa-broadcast-tower"></i> Live Analysis</a>
+                                    <a href="{% url 'live_dashboard' %}" class="dropdown-item"><i class="fas fa-tachometer-alt"></i> Live Dashboard</a>
+                                    <a href="{% url 'ip_analysis' %}" class="dropdown-item"><i class="fas fa-network-wired"></i> Network Tools</a>
+                                    <a href="{% url 'virus_total' %}" class="dropdown-item"><i class="fas fa-shield-virus"></i> Threat Scanner</a>
+                                    <a href="{% url 'macro_identifier' %}" class="dropdown-item"><i class="fas fa-code"></i> Macro Analyzer</a>
+                                    <a href="{% url 'powershell_analyzer' %}" class="dropdown-item"><i class="fas fa-terminal"></i> PowerShell Analyzer</a>
+                                </div>
+                            </li>
+                            <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-shield-alt"></i> Dashboard</a></li>
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+        </header>
+    </div>
+
+    <main class="main-section">
+        <div class="container">
+            <div class="section-header" data-aos="fade-down">
+                <h1 class="section-title">PowerShell Analyzer</h1>
+                <p style="color: #a0a0c0;">Detect malicious patterns, deobfuscate code, and assess risk in PS1 scripts.</p>
+            </div>
+
+            <div class="cyber-panel">
+                {% if error %}
+                    <div style="background: rgba(255, 0, 85, 0.1); border: 1px solid var(--cyber-red); padding: 15px; color: var(--cyber-red); margin-bottom: 20px; border-radius: 4px; font-family: 'Orbitron';">
+                        <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                    </div>
+                {% endif %}
+
+                {% if not file_uploaded %}
+                <form method="post" enctype="multipart/form-data" id="uploadForm">
+                    {% csrf_token %}
+                    
+                    <div class="upload-area">
+                        <i class="fas fa-cloud-upload-alt upload-icon"></i>
+                        <p style="color: white; margin-bottom: 15px; font-family: 'Orbitron';">Upload PowerShell Script (.ps1)</p>
+                        <label for="file-upload" class="file-label">CHOOSE FILE</label>
+                        <input id="file-upload" type="file" name="ps_file" accept=".ps1" onchange="handleInput(this, 'file')">
+                        <p id="file-info" style="margin-top: 15px; color: #a0a0c0; font-size: 0.9rem;">No file selected</p>
+                    </div>
+
+                    <div class="divider">- OR PASTE CODE -</div>
+
+                    <textarea name="ps_code" id="ps-code" class="code-textarea" placeholder="# Paste raw PowerShell code here...&#10;Try passing: -w 1 or nEw-oB`jecT" oninput="handleInput(this, 'text')"></textarea>
+
+                    <button type="submit" id="submitBtn" class="cyber-btn btn-analyze" disabled>
+                        <i class="fas fa-search"></i> ANALYZE SCRIPT
+                    </button>
+                </form>
+                {% endif %}
+
+                {% if results %}
+                    {{ results|json_script:"scan-results-data" }}
+                    
+                    <h3 style="font-family: 'Orbitron'; color: white; border-bottom: 1px solid rgba(0,243,255,0.3); padding-bottom: 10px; margin-bottom: 20px;">
+                        Analysis Results: <span style="color: var(--cyber-blue);">{{ filename }}</span>
+                    </h3>
+
+                    <div class="results-grid">
+                        
+                        <div class="result-card">
+                            <div class="result-header"><i class="fas fa-file-code"></i> Static Analysis</div>
+                            
+                            <div>
+                                <span class="status-badge {% if results.risk_level == 'CRITICAL' or results.risk_level == 'HIGH' %}status-critical{% elif results.risk_level == 'MEDIUM' %}status-medium{% else %}status-safe{% endif %}">
+                                    RISK LEVEL: {{ results.risk_level }}
+                                </span>
+                                <span class="status-badge" style="border-color: #a0a0c0; color: white;">
+                                    THREAT SCORE: {{ results.threat_score }}
+                                </span>
+                            </div>
+
+                            {% if results.details %}
+                            <ul class="details-list" style="margin-top: 20px;">
+                                {% for detail in results.details %}
+                                    <li>{{ detail }}</li>
+                                {% endfor %}
+                            </ul>
+                            {% endif %}
+
+                            {% if results.threats %}
+                            <div class="threat-box">
+                                <h4 style="color: var(--cyber-red); font-family: 'Orbitron'; margin-bottom: 15px; display: flex; align-items: center; justify-content: space-between;">
+                                    <span><i class="fas fa-bug"></i> Detected Threats</span>
+                                    <span style="font-size: 0.7rem; color: #a0a0c0;">Scanning for Remcos/Azorult Patterns</span>
+                                </h4>
+                                
+                                {% for threat in results.threats %}
+                                <div class="threat-item {% if threat.severity >= 8 %}critical{% elif threat.severity >= 5 %}medium{% else %}safe{% endif %}">
+                                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                                        <span class="threat-pattern" style="font-size: 1rem;">{{ threat.description }}</span>
+                                        <span style="background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 4px; font-size: 0.7rem; color: #aaa;">
+                                            {{ threat.category }}
+                                        </span>
+                                    </div>
+                                    <div style="font-size: 0.85rem; color: #ccc; margin-top: 5px;">
+                                        Pattern Match: <code style="background: #222; padding: 2px 5px; color: var(--cyber-blue);">{{ threat.pattern }}</code>
+                                    </div>
+                                    <div class="{% if threat.severity >= 8 %}text-critical{% elif threat.severity >= 5 %}text-medium{% else %}text-safe{% endif %}" style="font-size: 0.8rem; margin-top: 5px;">
+                                        SEVERITY: {{ threat.severity }}/10
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <div style="margin-top:20px; color: var(--cyber-green); font-family:'Orbitron';">
+                                <i class="fas fa-check-circle"></i> No specific threat patterns detected.
+                            </div>
+                            {% endif %}
+                            
+                            <div style="margin-top: 30px;">
+                                <div id="code-raw" class="code-block" style="border-left: 3px solid var(--cyber-blue);">
+                                    <div class="result-header" style="font-size: 0.9rem; border:none; margin:0;">Analyzed Script</div>
+                                    <pre style="white-space: pre-wrap; margin-top: 10px;">{{ results.extracted_code }}</pre>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="result-card">
+                            <div class="result-header" style="color: var(--cyber-purple); border-color: var(--cyber-purple);">
+                                <i class="fas fa-robot"></i> AI Security Assessment
+                            </div>
+                            
+                            <div id="ai-output" class="terminal-box">> Ready for AI analysis...
+> Click the button below to send this script to Gemini AI for deep inspection.</div>
+
+                            <button type="button" class="btn-ai" id="aiBtn" onclick="generateAIReport()">
+                                <i class="fas fa-magic"></i> GENERATE AI REPORT
+                            </button>
+                        </div>
+
+                    </div>
+
+                    <div style="display: flex; gap: 20px; justify-content: center; margin-top: 40px;">
+                        <a href="{% url 'powershell_analyzer' %}" class="file-label" style="text-decoration: none; text-align: center;">ANALYZE ANOTHER</a>
+                        <a href="{% url 'index' %}" class="file-label" style="text-decoration: none; text-align: center; background: transparent; color: white; border-color: white;">BACK HOME</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+
+    <footer class="cyber-footer">
+        <div class="container">
+            <p class="copyright">&copy; 2024 NETPULSE. All rights reserved. | Cybersecurity Platform</p>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({ duration: 1000, once: true });
+
+        function handleInput(input, type) {
+            const submitBtn = document.getElementById('submitBtn');
+            const fileInfo = document.getElementById('file-info');
+            
+            if (type === 'file') {
+                if (input.files && input.files[0]) {
+                    fileInfo.textContent = 'SELECTED: ' + input.files[0].name;
+                    fileInfo.style.color = 'var(--cyber-blue)';
+                    document.getElementById('ps-code').value = ''; 
+                    submitBtn.disabled = false;
+                }
+            } else if (type === 'text') {
+                if (input.value.trim().length > 0) {
+                    document.getElementById('file-upload').value = '';
+                    fileInfo.textContent = 'No file selected';
+                    fileInfo.style.color = '#a0a0c0';
+                    submitBtn.disabled = false;
+                } else {
+                    submitBtn.disabled = true;
+                }
+            }
+        }
+
+        if(document.getElementById('uploadForm')) {
+            document.getElementById('uploadForm').addEventListener('submit', function() {
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = true;
+                submitBtn.classList.add('btn-loading');
+                submitBtn.innerHTML = 'ANALYZING...';
+            });
+        }
+
+        // --- AI REPORT LOGIC ---
+        function generateAIReport() {
+            const btn = document.getElementById('aiBtn');
+            const outputBox = document.getElementById('ai-output');
+            const scanData = JSON.parse(document.getElementById('scan-results-data').textContent);
+
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+            btn.innerHTML = ''; // Clear text for spinner
+            
+            outputBox.innerHTML = '> Connecting to Neural Network...\n> Sending script signature...\n> Analyzing logic flow...';
+
+            fetch('/generate-report/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scan_results: scanData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-sync"></i> REGENERATE REPORT';
+
+                if (data.success) {
+                    typeWriter(data.report, outputBox);
+                } else {
+                    outputBox.innerHTML += '\n\n[ERROR]: ' + (data.error || "Unknown error");
+                }
+            })
+            .catch(error => {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+                btn.innerHTML = 'RETRY CONNECTION';
+                outputBox.innerHTML += '\n\n[CRITICAL]: Connection Failed.';
+            });
+        }
+
+        function typeWriter(text, element) {
+            element.innerHTML = "> REPORT GENERATED:\n\n";
+            let i = 0;
+            const speed = 5; 
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    element.scrollTop = element.scrollHeight; 
+                    setTimeout(type, speed);
+                }
+            }
+            type();
+        }
+    </script>
+</body>
+</html>

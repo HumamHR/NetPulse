@@ -1,0 +1,531 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NETPULSE - Network Traffic Analysis</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+</head>
+<body>
+    <style>
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    :root {
+        --cyber-blue: #00f3ff;
+        --cyber-purple: #9d00ff;
+        --cyber-dark: #0a0a0f;
+        --cyber-darker: #05050a;
+        --cyber-gray: #1a1a2e;
+        --cyber-light: #e6e6e6;
+        --cyber-green: #00ff9d;
+        --cyber-red: #ff0055;
+        --cyber-yellow: #ffd700;
+    }
+
+    /* --- CUSTOM SCROLLBAR STYLES --- */
+    html { scrollbar-width: thin; scrollbar-color: var(--cyber-blue) var(--cyber-darker); }
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: var(--cyber-darker); }
+    ::-webkit-scrollbar-thumb { background-color: var(--cyber-blue); border-radius: 5px; border: 2px solid var(--cyber-darker); }
+    ::-webkit-scrollbar-thumb:hover { background-color: var(--cyber-purple); box-shadow: 0 0 10px var(--cyber-blue); }
+
+    body {
+        font-family: 'Roboto', sans-serif;
+        background: var(--cyber-darker);
+        color: var(--cyber-light);
+        overflow-x: hidden;
+        position: relative;
+    }
+
+    /* Cyber Effects */
+    .cyber-effects {
+        position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1;
+    }
+    .scan-line {
+        position: absolute; width: 100%; height: 2px;
+        background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent);
+        top: 0; animation: scan 3s linear infinite; opacity: 0.3;
+    }
+    .grid-overlay {
+        position: absolute; width: 100%; height: 100%;
+        background-image: linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                          linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+        background-size: 50px 50px; opacity: 0.2;
+    }
+    .data-point {
+        position: absolute; width: 4px; height: 4px; background: var(--cyber-blue); border-radius: 50%;
+        animation: pulse 2s infinite; opacity: 0.5;
+    }
+
+    @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+    @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.5); opacity: 1; } }
+
+    /* Header Styles */
+    .cyber-header {
+        background: linear-gradient(135deg, var(--cyber-darker) 0%, var(--cyber-gray) 50%, var(--cyber-darker) 100%);
+        position: relative; overflow: visible; z-index: 5000;
+    }
+    .cyber-header::before {
+        content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+        background: radial-gradient(circle at 20% 50%, rgba(157, 0, 255, 0.1) 0%, transparent 50%),
+                    radial-gradient(circle at 80% 20%, rgba(0, 243, 255, 0.1) 0%, transparent 50%);
+    }
+
+    .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 2; }
+
+    /* Navigation */
+    .navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid rgba(0, 243, 255, 0.1); }
+    .logo-container { display: flex; align-items: center; gap: 10px; }
+    .logo-icon { font-size: 2rem; color: var(--cyber-blue); text-shadow: 0 0 10px var(--cyber-blue); animation: glow 2s ease-in-out infinite alternate; }
+    .logo-text {
+        font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 700;
+        background: linear-gradient(45deg, var(--cyber-blue), var(--cyber-purple));
+        -webkit-background-clip: text; -moz-background-clip: text; background-clip: text;
+        color: transparent; text-shadow: 0 0 20px rgba(0, 243, 255, 0.3);
+    }
+
+    .nav-list { display: flex; list-style: none; gap: 30px; align-items: center; height: 100%; }
+    .nav-item { position: relative; display: flex; align-items: center; height: 100%; }
+    .nav-link {
+        color: var(--cyber-light); text-decoration: none; font-family: 'Orbitron', sans-serif;
+        font-weight: 500; font-size: 0.9rem; padding: 10px 15px; border-radius: 4px;
+        transition: all 0.3s ease; display: flex; align-items: center; gap: 8px;
+    }
+    .nav-link:hover { color: var(--cyber-blue); background: rgba(0, 243, 255, 0.1); box-shadow: 0 0 15px rgba(0, 243, 255, 0.2); }
+    .nav-link.active { color: var(--cyber-blue); background: rgba(0, 243, 255, 0.15); box-shadow: 0 0 20px rgba(0, 243, 255, 0.3); }
+    .ctf-button .nav-link { background: linear-gradient(45deg, var(--cyber-purple), var(--cyber-blue)); color: white; font-weight: 700; padding: 12px 25px; }
+    .ctf-button .nav-link:hover { transform: translateY(-2px); box-shadow: 0 5px 20px rgba(157, 0, 255, 0.4); }
+
+    /* Dropdown */
+    .nav-item.dropdown { position: relative; cursor: pointer; }
+    .dropdown-menu {
+        display: none; position: absolute; top: 100%; margin-top: -5px; left: 0;
+        background: var(--cyber-darker); border: 1px solid var(--cyber-blue); min-width: 240px;
+        z-index: 10000; border-radius: 4px; box-shadow: 0 10px 30px rgba(0, 0, 0, 0.8); padding: 10px 0;
+    }
+    .dropdown-menu::before { content: ""; position: absolute; top: -40px; left: 0; width: 100%; height: 40px; background: transparent; }
+    .nav-item.dropdown:hover .dropdown-menu { display: block; animation: fadeIn 0.2s ease-in-out; }
+    .dropdown-item {
+        display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+        color: var(--cyber-light); text-decoration: none; transition: all 0.2s ease;
+        font-size: 0.9rem; font-family: 'Orbitron', sans-serif; border-left: 3px solid transparent;
+        background: var(--cyber-darker); position: relative;
+    }
+    .dropdown-item:hover { background: rgba(0, 243, 255, 0.05); color: var(--cyber-blue); padding-left: 25px; border-left: 3px solid var(--cyber-blue); }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    /* Hero */
+    .cyber-hero { padding: 80px 0; position: relative; z-index: 1; }
+    .hero-content { display: grid; grid-template-columns: 1fr 1fr; gap: 60px; align-items: center; }
+    .hero-text { position: relative; z-index: 2; }
+    .cyber-subtitle { font-family: 'Orbitron', sans-serif; font-size: 0.9rem; color: var(--cyber-blue); text-transform: uppercase; letter-spacing: 2px; margin-bottom: 20px; }
+    .cyber-glow { text-shadow: 0 0 10px var(--cyber-blue); animation: text-glow 2s ease-in-out infinite alternate; }
+    .cyber-highlight { color: var(--cyber-blue); text-shadow: 0 0 20px rgba(0, 243, 255, 0.5); }
+    .cyber-description { font-size: 1.1rem; line-height: 1.6; color: #a0a0c0; margin-bottom: 40px; }
+    .hero-stats { display: flex; gap: 40px; margin-top: 40px; }
+    .stat-item { text-align: center; }
+    .stat-number { font-family: 'Orbitron', sans-serif; font-size: 2.5rem; font-weight: 700; color: var(--cyber-blue); margin-bottom: 5px; text-shadow: 0 0 15px rgba(0, 243, 255, 0.5); }
+    .stat-label { font-size: 0.9rem; color: #a0a0c0; text-transform: uppercase; letter-spacing: 1px; }
+
+    /* Globe Visual */
+    .hero-visual { display: flex; justify-content: center; align-items: center; perspective: 1200px; height: 400px; position: relative; z-index: 1; }
+    .cyber-globe-container { position: relative; width: 320px; height: 320px; transform-style: preserve-3d; animation: floatGlobe 8s ease-in-out infinite; pointer-events: none; }
+    .globe-core { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 140px; height: 140px; border-radius: 50%; background: radial-gradient(circle at center, rgba(0, 243, 255, 0.4) 0%, rgba(157, 0, 255, 0.1) 60%, transparent 100%); box-shadow: 0 0 60px rgba(0, 243, 255, 0.3); animation: pulseLight 4s ease-in-out infinite alternate; }
+    .core-icon { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 5rem; color: var(--cyber-blue); text-shadow: 0 0 30px rgba(0, 243, 255, 0.6); opacity: 0.9; z-index: 2; }
+    .globe-ring { position: absolute; top: 50%; left: 50%; border-radius: 50%; border: 2px solid transparent; transform-style: preserve-3d; box-shadow: 0 0 15px rgba(0, 243, 255, 0.1) inset; }
+    .ring-outer { width: 320px; height: 320px; border-top-color: var(--cyber-blue); border-bottom-color: var(--cyber-purple); opacity: 0.6; animation: rotateRingX 15s linear infinite; }
+    .ring-middle { width: 260px; height: 260px; border-left-color: var(--cyber-blue); border-right-color: var(--cyber-purple); border-width: 3px; opacity: 0.8; animation: rotateRingY 10s linear infinite reverse; }
+    .ring-inner { width: 200px; height: 200px; border: 2px dashed var(--cyber-blue); opacity: 0.5; animation: rotateRingZ 20s linear infinite; }
+    @keyframes rotateRingX { 0% { transform: translate(-50%, -50%) rotateX(70deg) rotateZ(0deg); } 100% { transform: translate(-50%, -50%) rotateX(70deg) rotateZ(360deg); } }
+    @keyframes rotateRingY { 0% { transform: translate(-50%, -50%) rotateY(60deg) rotateX(0deg); } 100% { transform: translate(-50%, -50%) rotateY(60deg) rotateX(360deg); } }
+    @keyframes rotateRingZ { 0% { transform: translate(-50%, -50%) rotateZ(-45deg) rotateX(0deg); } 100% { transform: translate(-50%, -50%) rotateZ(-45deg) rotateX(360deg); } }
+    @keyframes floatGlobe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-15px) scale(1.02); } }
+    @keyframes pulseLight { 0% { opacity: 0.5; transform: translate(-50%, -50%) scale(0.9); } 100% { opacity: 1; transform: translate(-50%, -50%) scale(1.1); } }
+
+    /* Services Section - FIXED FOR ALIGNMENT */
+    .services-section { padding: 100px 0; background: var(--cyber-darker); position: relative; }
+    .section-header { text-align: center; margin-bottom: 60px; }
+    .section-title { font-family: 'Orbitron', sans-serif; font-size: 2.5rem; color: var(--cyber-light); margin-bottom: 15px; position: relative; display: inline-block; text-align: center; }
+    .section-title::after { content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%); width: 100px; height: 3px; background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent); }
+    .section-subtitle { font-size: 1.1rem; color: #a0a0c0; max-width: 600px; margin: 0 auto; text-align: center; }
+    .services-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 30px; }
+
+    .service-card {
+        background: var(--cyber-gray); border-radius: 15px; padding: 30px; text-decoration: none;
+        color: var(--cyber-light); transition: all 0.3s ease; border: 1px solid rgba(0, 243, 255, 0.1);
+        position: relative; overflow: hidden;
+        /* --- FLEXBOX ALIGNMENT FIX --- */
+        display: flex; 
+        flex-direction: column; 
+        height: 100%; /* Force all cards to fill grid height */
+    }
+    .service-card::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px; background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue)); transform: scaleX(0); transition: transform 0.3s ease; }
+    .service-card:hover { transform: translateY(-10px); box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3); border-color: var(--cyber-blue); }
+    .service-card:hover::before { transform: scaleX(1); }
+
+    .service-icon { font-size: 2.5rem; color: var(--cyber-blue); margin-bottom: 20px; text-shadow: 0 0 15px rgba(0, 243, 255, 0.5); }
+    .service-title { font-family: 'Orbitron', sans-serif; font-size: 1.3rem; color: var(--cyber-light); margin-bottom: 15px; }
+    .service-description { font-size: 0.95rem; color: #a0a0c0; line-height: 1.6; margin-bottom: 20px; }
+    .service-features { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 25px; }
+    .feature-tag { background: rgba(0, 243, 255, 0.1); color: var(--cyber-blue); padding: 5px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; }
+
+    .service-action {
+        display: flex; align-items: center; justify-content: space-between;
+        color: var(--cyber-blue); font-weight: 500; transition: all 0.3s ease;
+        /* --- PUSH TO BOTTOM --- */
+        margin-top: auto; 
+    }
+    .service-card:hover .service-action { transform: translateX(5px); }
+
+    /* Features Section */
+    .features-section { padding: 100px 0; background: linear-gradient(135deg, var(--cyber-darker) 0%, var(--cyber-gray) 100%); }
+    .features-header { text-align: center; margin-bottom: 60px; }
+    .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 40px; }
+    .feature-item { text-align: center; padding: 40px 20px; background: rgba(255, 255, 255, 0.02); border-radius: 15px; border: 1px solid rgba(0, 243, 255, 0.05); transition: all 0.3s ease; }
+    .feature-item:hover { transform: translateY(-5px); background: rgba(255, 255, 255, 0.05); border-color: rgba(0, 243, 255, 0.2); box-shadow: 0 15px 30px rgba(0, 0, 0, 0.2); }
+    .feature-icon { font-size: 3rem; color: var(--cyber-blue); margin-bottom: 20px; text-shadow: 0 0 20px rgba(0, 243, 255, 0.5); }
+    .feature-title { font-family: 'Orbitron', sans-serif; font-size: 1.2rem; color: var(--cyber-light); margin-bottom: 15px; }
+    .feature-description { font-size: 0.95rem; color: #a0a0c0; line-height: 1.6; }
+
+    /* CTA Section */
+    .cta-section { padding: 100px 0; background: linear-gradient(135deg, var(--cyber-purple) 0%, var(--cyber-blue) 100%); position: relative; overflow: hidden; }
+    .cta-section::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="2" fill="white" opacity="0.1"/></svg>'); background-size: 50px 50px; animation: moveBackground 20s linear infinite; }
+    .cta-content { text-align: center; position: relative; z-index: 2; }
+    .cta-title { font-family: 'Orbitron', sans-serif; font-size: 3rem; color: white; margin-bottom: 20px; text-shadow: 0 0 20px rgba(0, 0, 0, 0.3); }
+    .cta-description { font-size: 1.1rem; color: rgba(255, 255, 255, 0.9); max-width: 600px; margin: 0 auto; }
+
+    /* Footer */
+    .cyber-footer { background: var(--cyber-darker); padding: 80px 0 30px; border-top: 1px solid rgba(0, 243, 255, 0.1); }
+    .footer-content { display: grid; grid-template-columns: 1fr 2fr; gap: 60px; margin-bottom: 60px; }
+    .footer-brand .logo-text { font-size: 2rem; margin-bottom: 20px; background: linear-gradient(45deg, var(--cyber-blue), var(--cyber-purple)); -webkit-background-clip: text; -moz-background-clip: text; background-clip: text; color: transparent; }
+    .footer-description { font-size: 0.95rem; color: #a0a0c0; line-height: 1.6; margin-bottom: 30px; }
+    .social-links { display: flex; gap: 15px; }
+    .social-link { width: 40px; height: 40px; background: var(--cyber-gray); border-radius: 50%; display: flex; align-items: center; justify-content: center; color: var(--cyber-blue); text-decoration: none; transition: all 0.3s ease; }
+    .social-link:hover { background: var(--cyber-blue); color: white; transform: translateY(-3px); box-shadow: 0 5px 15px rgba(0, 243, 255, 0.3); }
+    .footer-links { display: grid; grid-template-columns: repeat(3, 1fr); gap: 40px; }
+    .link-title { font-family: 'Orbitron', sans-serif; font-size: 1.1rem; color: var(--cyber-light); margin-bottom: 20px; }
+    .footer-link { display: block; color: #a0a0c0; text-decoration: none; margin-bottom: 12px; font-size: 0.9rem; transition: all 0.3s ease; }
+    .footer-link:hover { color: var(--cyber-blue); transform: translateX(5px); }
+    .footer-bottom { padding-top: 30px; border-top: 1px solid rgba(0, 243, 255, 0.1); display: flex; justify-content: space-between; align-items: center; }
+    .copyright { font-size: 0.9rem; color: #a0a0c0; }
+    .tech-badges { display: flex; gap: 10px; }
+    .tech-badge { background: rgba(0, 243, 255, 0.1); color: var(--cyber-blue); padding: 5px 15px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; }
+
+    /* Animations */
+    @keyframes glow { from { text-shadow: 0 0 10px var(--cyber-blue); } to { text-shadow: 0 0 20px var(--cyber-blue), 0 0 30px var(--cyber-purple); } }
+    @keyframes text-glow { from { text-shadow: 0 0 10px var(--cyber-blue); } to { text-shadow: 0 0 20px var(--cyber-blue), 0 0 30px var(--cyber-blue); } }
+    @keyframes moveBackground { from { transform: translateY(0); } to { transform: translateY(50px); } }
+
+    @media (max-width: 992px) {
+        .hero-content { grid-template-columns: 1fr; text-align: center; }
+        .hero-visual { order: -1; margin-bottom: 40px; height: 350px; }
+        .footer-content { grid-template-columns: 1fr; gap: 40px; }
+        .footer-links { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 768px) {
+        .navbar { flex-direction: column; gap: 20px; }
+        .nav-list { flex-wrap: wrap; justify-content: center; }
+        .cyber-title { font-size: 2.5rem; }
+        .hero-stats { flex-direction: column; gap: 20px; }
+        .services-grid { grid-template-columns: 1fr; }
+        .footer-bottom { flex-direction: column; gap: 20px; text-align: center; }
+    }
+    @media (max-width: 480px) {
+        .cyber-title { font-size: 2rem; }
+        .section-title { font-size: 2rem; }
+        .hero-visual { height: 300px; }
+        .cyber-globe-container { width: 280px; height: 280px; }
+        .footer-links { grid-template-columns: 1fr; }
+        .tech-badges { flex-wrap: wrap; justify-content: center; }
+    }
+    @supports not (background-clip: text) { .logo-text, .cyber-title, .footer-brand .logo-text { background: none; color: var(--cyber-blue); } }
+    </style>
+  <div class="cyber-header">
+    <header class="header">
+        <div class="main-header">
+            <div class="container">
+                <nav class="navbar">
+                    <a class="navbar-brand" href="#">
+                        <div class="logo-container">
+                            <i class="fas fa-satellite-dish logo-icon"></i>
+                            <span class="logo-text">NETPULSE</span>
+                        </div>
+                    </a>
+                    <div class="nav-menu">
+                        <ul class="nav-list">
+                            <li class="nav-item active"><a class="nav-link" href="#"><i class="fas fa-home"></i> Home</a></li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link" href="#"><i class="fas fa-tools"></i> Tools <i class="fas fa-chevron-down" style="font-size: 0.8em; margin-left: 5px;"></i></a>
+                                <div class="dropdown-menu">
+                                    <a href="{% url 'upload' %}" class="dropdown-item"><i class="fas fa-file-code"></i> PCAP Analysis</a>
+                                    <a href="{% url 'sniff_page' %}" class="dropdown-item"><i class="fas fa-broadcast-tower"></i> Live Analysis</a>
+                                    <a href="{% url 'live_dashboard' %}" class="dropdown-item"><i class="fas fa-tachometer-alt"></i> Live Dashboard</a>
+                                    <a href="{% url 'ip_analysis' %}" class="dropdown-item"><i class="fas fa-network-wired"></i> Network Tools</a>
+                                    <a href="{% url 'virus_total' %}" class="dropdown-item"><i class="fas fa-shield-virus"></i> Threat Scanner</a>
+                                    <a href="{% url 'macro_identifier' %}" class="dropdown-item"><i class="fas fa-code"></i> Macro Analyzer</a>
+                                    <a href="{% url 'powershell_analyzer' %}" class="dropdown-item"><i class="fas fa-terminal"></i> PowerShell Analyzer</a>
+                                    
+                                </div>
+                            </li>
+                            <li class="nav-item"><a class="nav-link" href="{% url 'login' %}"><i class="fas fa-sign-in-alt"></i> Sign In/Up</a></li>
+                            <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-envelope"></i> Contact</a></li>
+                            <li class="nav-item ctf-button"><a class="nav-link" href="#"><i class="fas fa-shield-alt"></i> Dashboard</a></li>
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <div class="cyber-hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text" data-aos="fade-up">
+                    <h5 class="cyber-subtitle"><span class="cyber-glow">ADVANCED NETWORK SECURITY</span></h5>
+                    <h1 class="cyber-title">Analyze Your <span class="cyber-highlight">Network Traffic</span> In Real-Time</h1>
+                    <p class="cyber-description">
+                        With our advanced platform, monitor, analyze, and secure your network infrastructure with cutting-edge tools and real-time threat detection.
+                    </p>
+                    <div class="hero-stats">
+                        <div class="stat-item">
+                            <h3 class="stat-number">Analyze</h3> <p class="stat-label">Networks</p>
+                        </div>
+                        <div class="stat-item">
+                            <h3 class="stat-number">Monitor</h3>
+                            <p class="stat-label">Traffic</p>
+                        </div>
+                        <div class="stat-item">
+                            <h3 class="stat-number">Detect</h3> <p class="stat-label">Anomalies</p>
+                        </div>
+                    </div>
+                </div>
+                <div class="hero-visual">
+                    <div class="cyber-globe-container">
+                        <div class="globe-core"></div>
+                        <i class="fas fa-globe-americas core-icon"></i>
+                        <div class="globe-ring ring-outer"></div>
+                        <div class="globe-ring ring-middle"></div>
+                        <div class="globe-ring ring-inner"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<main class="cyber-main">
+    <section class="services-section">
+        <div class="container">
+            <div class="section-header">
+                <h3 class="section-title">Our Security Tools</h3>
+                <p class="section-subtitle">Comprehensive network analysis and threat detection solutions</p>
+            </div>
+            <div class="services-grid">
+                <a href="upload" class="service-card">
+                    <div class="service-icon"><i class="fas fa-file-code"></i></div>
+                    <h4 class="service-title">Offline PCAP Analysis</h4>
+                    <p class="service-description">Deep packet inspection and analysis of network capture files with detailed reporting</p>
+                    <div class="service-features">
+                        <span class="feature-tag">Packet Inspection</span>
+                        <span class="feature-tag">Traffic Flow</span>
+                        <span class="feature-tag">Protocol Analysis</span>
+                    </div>
+                    <div class="service-action"><span class="action-text">Analyze Now</span><i class="fas fa-arrow-right"></i></div>
+                </a>
+                <a href="{% url 'sniff_page' %}" class="service-card">
+                    <div class="service-icon"><i class="fas fa-broadcast-tower"></i></div>
+                    <h4 class="service-title">Live Analysis</h4>
+                    <p class="service-description">Real-time network traffic monitoring with instant threat detection and alerts</p>
+                    <div class="service-features">
+                        <span class="feature-tag">Real-time</span>
+                        <span class="feature-tag">Live Monitoring</span>
+                        <span class="feature-tag">Instant Alerts</span>
+                    </div>
+                    <div class="service-action"><span class="action-text">Monitor Live</span><i class="fas fa-arrow-right"></i></div>
+                </a>
+
+                <a href="{% url 'live_dashboard' %}" class="service-card">
+                    <div class="service-icon"><i class="fas fa-tachometer-alt"></i></div>
+                    <h4 class="service-title">Live Dashboard</h4>
+                    <p class="service-description">Interactive mission control center with real-time attack maps and traffic telemetry</p>
+                    <div class="service-features">
+                        <span class="feature-tag">Threat Map</span>
+                        <span class="feature-tag">Live Graphs</span>
+                        <span class="feature-tag">IDS Alerts</span>
+                    </div>
+                    <div class="service-action"><span class="action-text">Open Dashboard</span><i class="fas fa-arrow-right"></i></div>
+                </a>
+
+                <a href="ip_analysis" class="service-card">
+                    <div class="service-icon"><i class="fas fa-network-wired"></i></div>
+                    <h4 class="service-title">Network Tools</h4>
+                    <p class="service-description">Advanced network diagnostic and analysis tools for comprehensive infrastructure checks</p>
+                    <div class="service-features">
+                        <span class="feature-tag">IP Analysis</span>
+                        <span class="feature-tag">Port Scanning</span>
+                        <span class="feature-tag">Diagnostics</span>
+                    </div>
+                    <div class="service-action"><span class="action-text">Access Tools</span><i class="fas fa-arrow-right"></i></div>
+                </a>
+                <a href="virus_total" class="service-card">
+                    <div class="service-icon"><i class="fas fa-shield-virus"></i></div>
+                    <h4 class="service-title">Threat Scanner</h4>
+                    <p class="service-description">Multi-engine threat scanning with malware detection and vulnerability assessment</p>
+                    <div class="service-features">
+                        <span class="feature-tag">Malware Scan</span>
+                        <span class="feature-tag">Vulnerability</span>
+                        <span class="feature-tag">Threat Intel</span>
+                    </div>
+                    <div class="service-action"><span class="action-text">Scan Now</span><i class="fas fa-arrow-right"></i></div>
+                </a>
+                <a href="macro_identifier" class="service-card">
+                    <div class="service-icon"><i class="fas fa-code"></i></div>
+                    <h4 class="service-title">Macro Analyzer</h4>
+                    <p class="service-description">Detection and analysis of malicious macros in documents and script files</p>
+                    <div class="service-features">
+                        <span class="feature-tag">Macro Analysis</span>
+                        <span class="feature-tag">Script Scan</span>
+                        <span class="feature-tag">Document Security</span>
+                    </div>
+                    <div class="service-action"><span class="action-text">Analyze Files</span><i class="fas fa-arrow-right"></i></div>
+                </a>
+                <a href="powershell_analyzer" class="service-card">
+                    <div class="service-icon"><i class="fas fa-terminal"></i></div>
+                    <h4 class="service-title">PowerShell Analyzer</h4>
+                    <p class="service-description">Static analysis and threat detection for PowerShell scripts to identify malicious patterns</p>
+                    <div class="service-features">
+                        <span class="feature-tag">Static Analysis</span>
+                        <span class="feature-tag">Deobfuscation</span>
+                        <span class="feature-tag">Threat Detection</span>
+                    </div>
+                    <div class="service-action"><span class="action-text">Analyze Scripts</span><i class="fas fa-arrow-right"></i></div>
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <section class="features-section">
+        <div class="container">
+            <div class="features-header">
+                <h3 class="section-title">Why Choose NetPulse</h3>
+                <p class="section-subtitle">Experience the next generation of network security with our advanced features</p>
+            </div>
+            <div class="features-grid">
+                <div class="feature-item">
+                    <div class="feature-icon"><i class="fas fa-bolt"></i></div>
+                    <h4 class="feature-title">Real-time Processing</h4>
+                    <p class="feature-description">Process network data in real-time with minimal latency and maximum efficiency</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
+                    <h4 class="feature-title">Robust Security Protocols</h4>
+                    <p class="feature-description">Implementing proven security protocols to protect network integrity</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon"><i class="fas fa-chart-line"></i></div>
+                    <h4 class="feature-title">Detailed Analytics</h4>
+                    <p class="feature-description">Comprehensive analytics dashboard with visual reports and insights</p>
+                </div>
+                <div class="feature-item">
+                    <div class="feature-icon"><i class="fas fa-tools"></i></div>
+                    <h4 class="feature-title">Customizable Alerts</h4>
+                    <p class="feature-description">Tailored alert systems to notify you of unusual network activity</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="cta-section">
+        <div class="container">
+            <div class="cta-content">
+                <h3 class="cta-title">Ready to Secure Your Network?</h3>
+                <p class="cta-description">Start analyzing your network traffic today with our comprehensive security platform</p>
+                </div>
+        </div>
+    </section>
+</main>
+
+<footer class="cyber-footer">
+    <div class="container">
+        <div class="footer-content">
+            <div class="footer-brand">
+                <div class="logo-container">
+                    <i class="fas fa-satellite-dish logo-icon"></i>
+                    <span class="logo-text">NETPULSE</span>
+                </div>
+                <p class="footer-description">Advanced network traffic analysis and security platform for modern enterprises</p>
+                <div class="social-links">
+                    <a href="#" class="social-link"><i class="fab fa-github"></i></a>
+                    <a href="https://www.linkedin.com/in/qaishammad/" class="social-link"><i class="fab fa-linkedin"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="social-link"><i class="fab fa-discord"></i></a>
+                </div>
+            </div>
+            <div class="footer-links">
+                <div class="link-group">
+                    <h5 class="link-title">Services</h5>
+                    <a href="upload" class="footer-link">PCAP Analysis</a>
+                    <a href="{% url 'sniff_page' %}" class="footer-link">Live Monitoring</a>
+                    <a href="{% url 'live_dashboard' %}" class="footer-link">Live Dashboard</a>
+                    <a href="ip_analysis" class="footer-link">Network Tools</a>
+                    <a href="virus_total" class="footer-link">Threat Scanner</a>
+                    <a href="powershell_analyzer" class="footer-link">PowerShell Analyzer</a>
+                </div>
+                <div class="link-group">
+                    <h5 class="link-title">Company</h5>
+                    <a href="#" class="footer-link">About Us</a>
+                    <a href="#" class="footer-link">Documentation</a>
+                    <a href="#" class="footer-link">API Access</a>
+                    <a href="#" class="footer-link">Contact</a>
+                </div>
+                <div class="link-group">
+                    <h5 class="link-title">Legal</h5>
+                    <a href="#" class="footer-link">Privacy Policy</a>
+                    <a href="#" class="footer-link">Terms of Service</a>
+                    <a href="#" class="footer-link">Security</a>
+                    <a href="#" class="footer-link">Compliance</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <p class="copyright">&copy; 2026 NETPULSE. All rights reserved. | Cybersecurity Platform</p>
+            <div class="tech-badges">
+                <span class="tech-badge">Python</span>
+                <span class="tech-badge">Django</span>
+                <span class="tech-badge">Cyber Security</span>
+                <span class="tech-badge">Network Analysis</span>
+            </div>
+        </div>
+    </div>
+</footer>
+
+<div class="cyber-effects">
+    <div class="scan-line"></div>
+    <div class="grid-overlay"></div>
+    <div class="data-points">
+        <div class="data-point" style="top: 20%; left: 10%;"></div>
+        <div class="data-point" style="top: 60%; left: 85%;"></div>
+        <div class="data-point" style="top: 80%; left: 30%;"></div>
+    </div>
+</div>
+
+<script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+<script>
+    AOS.init({
+        duration: 1000,
+        once: true,
+        offset: 100
+    });
+</script>
+
+</body>
+</html>

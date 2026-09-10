@@ -1,0 +1,119 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NETPULSE | Access Control</title>
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="{% static 'css/login_style.css' %}?v=1.2">
+  
+  <script src="{% static 'js/login_move.js' %}" defer></script>
+</head>
+<body>
+
+  <div class="cyber-effects">
+      <div class="scan-line"></div>
+      <div class="grid-overlay"></div>
+      <div class="data-points">
+          <div class="data-point" style="top: 20%; left: 10%;"></div>
+          <div class="data-point" style="top: 60%; left: 85%;"></div>
+          <div class="data-point" style="top: 80%; left: 30%;"></div>
+      </div>
+  </div>
+
+  <div class="main-wrapper">
+      
+      <div class="login-header">
+          <div class="logo-container">
+              <i class="fas fa-satellite-dish logo-icon"></i>
+              <span class="logo-text">NETPULSE</span>
+          </div>
+       
+         
+      </div>
+
+      <div class="container" id="container">
+        
+        <div class="form-container sign-up">
+          <form>
+            <h1><i class="fas fa-user-plus"></i> Initialize User</h1>
+            <div class="social-icons">
+              <a href="#" class="icon"><i class="fa-brands fa-google"></i></a>
+              <a href="#" class="icon"><i class="fa-brands fa-github"></i></a>
+              <a href="#" class="icon"><i class="fa-brands fa-linkedin-in"></i></a>
+            </div>
+            <span>or use your email for registration</span>
+            <div class="input-group">
+                <i class="fas fa-user input-icon"></i>
+                <input type="text" placeholder="Username" name="username" required>
+            </div>
+            <div class="input-group">
+                <i class="fas fa-envelope input-icon"></i>
+                <input type="email" placeholder="Email" name="email" required>
+            </div>
+            <div class="input-group">
+                <i class="fas fa-lock input-icon"></i>
+                <input type="password" placeholder="Password" name="password" required>
+            </div>
+            <div class="input-group">
+                <i class="fas fa-lock input-icon"></i>
+                <input type="password" placeholder="Confirm Password" name="confirm_password" required>
+            </div>
+            <button type="submit">Register ID</button>
+          </form>
+        </div>
+
+        <div class="form-container sign-in">
+          <form>
+            <h1><i class="fas fa-shield-alt"></i> Authenticate</h1>
+            <div class="social-icons">
+              <a href="#" class="icon"><i class="fa-brands fa-google"></i></a>
+              <a href="#" class="icon"><i class="fa-brands fa-github"></i></a>
+              <a href="#" class="icon"><i class="fa-brands fa-linkedin-in"></i></a>
+            </div>
+            <span>use your credentials to access the grid</span>
+            <div class="input-group">
+                <i class="fas fa-user input-icon"></i>
+                <input type="text" placeholder="Username or Email" name="username" required>
+            </div>
+            <div class="input-group">
+                <i class="fas fa-lock input-icon"></i>
+                <input type="password" placeholder="Password" name="password" required>
+            </div>
+            <div class="login-options">
+                <label class="checkbox-container">
+                    <input type="checkbox" name="remember">
+                    <span class="checkmark"></span>
+                    Remember me
+                </label>
+                <a href="#" class="forgot-pass">Lost Access Key?</a>
+            </div>
+            <button type="submit">Access System</button>
+          </form>
+        </div>
+
+        <div class="toggle-container">
+          <div class="toggle">
+            <div class="toggle-panel toggle-left">
+              <h1>Welcome Back, Agent!</h1>
+              <p>Re-establish connection to the central mainframe.</p>
+              <button class="ghost" id="login">Authenticate</button>
+            </div>
+            <div class="toggle-panel toggle-right">
+              <h1>New Connection?</h1>
+              <p>Establish a secure link and join the network.</p>
+              <button class="ghost" id="register">Initialize</button>
+            </div>
+          </div>
+        </div>
+        
+      </div>
+  </div>
+
+</body>
+</html>

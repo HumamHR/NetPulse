@@ -1,0 +1,250 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NETPULSE | Scan Result</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        /* --- CORE THEME --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        :root {
+            --cyber-blue: #00f3ff; --cyber-purple: #9d00ff; --cyber-dark: #0a0a0f; --cyber-darker: #05050a;
+            --cyber-gray: #1a1a2e; --cyber-light: #e6e6e6; --cyber-green: #00ff9d; --cyber-red: #ff0055;
+        }
+        body {
+            font-family: 'Roboto', sans-serif; background: var(--cyber-darker); color: var(--cyber-light);
+            min-height: 100vh; display: flex; flex-direction: column;
+        }
+
+        /* --- HEADER & NAV (Simplified for Result Page) --- */
+        .cyber-header {
+            background: linear-gradient(135deg, var(--cyber-darker) 0%, var(--cyber-gray) 50%, var(--cyber-darker) 100%);
+            padding: 20px 0; border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+        }
+        .container { max-width: 1000px; margin: 0 auto; padding: 0 20px; }
+        .logo-text {
+            font-family: 'Orbitron', sans-serif; font-size: 1.5rem; font-weight: 700;
+            background: linear-gradient(45deg, var(--cyber-blue), var(--cyber-purple));
+            -webkit-background-clip: text; -moz-background-clip: text; background-clip: text; color: transparent;
+        }
+
+        /* --- RESULT CARD --- */
+        .result-section { padding: 60px 0; flex: 1; }
+        .result-container {
+            background: var(--cyber-gray); border: 1px solid rgba(0, 243, 255, 0.1); border-radius: 15px;
+            padding: 40px; box-shadow: 0 0 40px rgba(0, 0, 0, 0.5); position: relative; overflow: hidden;
+        }
+        .result-container::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue));
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif; font-size: 2rem; color: var(--cyber-blue);
+            margin-bottom: 30px; display: flex; align-items: center; gap: 15px;
+        }
+
+        /* Scan Header Grid */
+        .scan-header {
+            display: grid; grid-template-columns: auto 1fr; gap: 40px; margin-bottom: 40px;
+            align-items: center;
+        }
+
+        /* Detection Circle */
+        .detection-circle { width: 140px; height: 140px; position: relative; }
+        .circle-bg { fill: none; stroke: rgba(255,255,255,0.1); stroke-width: 2.5; }
+        .circle-progress {
+            fill: none; stroke: var(--cyber-red); stroke-width: 2.5; stroke-linecap: round;
+            transform: rotate(-90deg); transform-origin: 50% 50%;
+            transition: stroke-dashoffset 1.5s ease;
+        }
+        .circle-text {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            text-align: center;
+        }
+        .circle-count { font-family: 'Orbitron', sans-serif; font-size: 2.5rem; font-weight: 700; color: white; }
+        .circle-label { font-size: 0.8rem; color: #a0a0c0; text-transform: uppercase; }
+
+        /* Info Box */
+        .scan-info {
+            background: rgba(0, 243, 255, 0.05); padding: 20px; border-radius: 8px;
+            border: 1px solid rgba(0, 243, 255, 0.1);
+        }
+        .info-row { display: flex; margin-bottom: 10px; }
+        .info-label { width: 120px; color: var(--cyber-blue); font-family: 'Orbitron', sans-serif; font-size: 0.85rem; }
+        .info-value { color: white; word-break: break-all; font-family: 'Courier New', monospace; }
+
+        /* Stats Grid */
+        .stats-grid {
+            display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-top: 20px;
+        }
+        .stat-item {
+            background: rgba(0, 0, 0, 0.3); padding: 15px; border-radius: 5px; text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+        .stat-count { font-family: 'Orbitron', sans-serif; font-size: 1.5rem; color: white; margin-bottom: 5px; }
+        .stat-label { font-size: 0.75rem; color: #a0a0c0; text-transform: uppercase; }
+
+        /* Table */
+        table { width: 100%; border-collapse: collapse; margin-top: 30px; font-size: 0.9rem; }
+        th {
+            background: rgba(0, 243, 255, 0.1); color: var(--cyber-blue); text-align: left;
+            padding: 15px; font-family: 'Orbitron', sans-serif; font-size: 0.8rem;
+            border-bottom: 2px solid rgba(0, 243, 255, 0.2);
+        }
+        td {
+            padding: 12px 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+            color: #ccc;
+        }
+        tr:hover { background: rgba(255, 255, 255, 0.02); }
+
+        /* Result Badges */
+        .badge { display: inline-flex; align-items: center; gap: 6px; font-weight: 500; font-size: 0.85rem; }
+        .malicious { color: var(--cyber-red); }
+        .harmless { color: var(--cyber-green); }
+        .suspicious { color: #fbbf24; }
+        .undetected { color: #a0a0c0; }
+
+        /* Buttons */
+        .btn-back {
+            display: inline-block; margin-top: 40px; padding: 12px 30px;
+            background: transparent; color: var(--cyber-blue); border: 1px solid var(--cyber-blue);
+            border-radius: 5px; text-decoration: none; font-family: 'Orbitron', sans-serif;
+            transition: all 0.3s;
+        }
+        .btn-back:hover { background: var(--cyber-blue); color: black; box-shadow: 0 0 15px rgba(0, 243, 255, 0.4); }
+
+        @media (max-width: 768px) {
+            .scan-header { grid-template-columns: 1fr; text-align: center; }
+            .detection-circle { margin: 0 auto; }
+            .stats-grid { grid-template-columns: 1fr 1fr; }
+        }
+        /* --- CUSTOM SCROLLBAR STYLES --- */
+    html { scrollbar-width: thin; scrollbar-color: var(--cyber-blue) var(--cyber-darker); }
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: var(--cyber-darker); }
+    ::-webkit-scrollbar-thumb { background-color: var(--cyber-blue); border-radius: 5px; border: 2px solid var(--cyber-darker); }
+    ::-webkit-scrollbar-thumb:hover { background-color: var(--cyber-purple); box-shadow: 0 0 10px var(--cyber-blue); }
+    </style>
+</head>
+<body>
+
+    <header class="cyber-header">
+        <div class="container">
+            <div class="logo-text"><i class="fas fa-satellite-dish"></i> NETPULSE</div>
+        </div>
+    </header>
+
+    <main class="result-section">
+        <div class="container">
+            <div class="result-container">
+                <h1><i class="fas fa-search"></i> Analysis Report</h1>
+
+                {% if result %}
+                    {% if result.error %}
+                        <div style="color: var(--cyber-red); padding: 20px; text-align: center; border: 1px solid var(--cyber-red);">
+                            <i class="fas fa-exclamation-triangle"></i> {{ result.error }}
+                        </div>
+                    {% else %}
+                        
+                        <div class="scan-header">
+                            {% if result.data.attributes.last_analysis_stats %}
+                            <div class="detection-circle">
+                                <svg width="140" height="140" viewBox="0 0 36 36">
+                                    <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" />
+                                    <path class="circle-progress" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
+                                        stroke-dasharray="{{ result.data.attributes.last_analysis_stats.malicious }}, 100" />
+                                </svg>
+                                <div class="circle-text">
+                                    <div class="circle-count">{{ result.data.attributes.last_analysis_stats.malicious }}</div>
+                                    <div class="circle-label">Detections</div>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <div class="scan-info">
+                                {% if result.data.attributes.last_analysis_stats %}
+                                    <div class="info-row"><div class="info-label">Scan Date:</div> <div class="info-value">{{ result.data.attributes.last_analysis_date|date:"Y-m-d H:i" }}</div></div>
+                                    {% if result.data.attributes.sha256 %}
+                                    <div class="info-row"><div class="info-label">SHA256:</div> <div class="info-value">{{ result.data.attributes.sha256|truncatechars:40 }}</div></div>
+                                    {% endif %}
+                                {% endif %}
+
+                                <div class="stats-grid">
+                                    <div class="stat-item"><div class="stat-count" style="color:var(--cyber-red)">{{ result.data.attributes.last_analysis_stats.malicious }}</div><div class="stat-label">Malicious</div></div>
+                                    <div class="stat-item"><div class="stat-count" style="color:#fbbf24">{{ result.data.attributes.last_analysis_stats.suspicious }}</div><div class="stat-label">Suspicious</div></div>
+                                    <div class="stat-item"><div class="stat-count" style="color:var(--cyber-green)">{{ result.data.attributes.last_analysis_stats.harmless }}</div><div class="stat-label">Safe</div></div>
+                                    <div class="stat-item"><div class="stat-count">{{ result.data.attributes.last_analysis_stats.undetected }}</div><div class="stat-label">Undetected</div></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {% if result.data.attributes.last_analysis_results %}
+                            <div style="overflow-x: auto;">
+                                <table>
+                                    <thead>
+                                        <tr>
+                                            <th>Security Engine</th>
+                                            <th>Detection Result</th>
+                                            <th>Version</th>
+                                            <th>Last Update</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for engine, scan in result.data.attributes.last_analysis_results.items %}
+                                            <tr>
+                                                <td>{{ engine }}</td>
+                                                <td>
+                                                    {% if scan.category == "malicious" %}
+                                                        <span class="badge malicious"><i class="fas fa-bug"></i> Malicious</span>
+                                                    {% elif scan.category == "harmless" %}
+                                                        <span class="badge harmless"><i class="fas fa-check-circle"></i> Clean</span>
+                                                    {% elif scan.category == "suspicious" %}
+                                                        <span class="badge suspicious"><i class="fas fa-exclamation-circle"></i> Suspicious</span>
+                                                    {% else %}
+                                                        <span class="badge undetected"><i class="fas fa-minus-circle"></i> {{ scan.category|title }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td>{{ scan.engine_version|default:"-" }}</td>
+                                                <td>{{ scan.method|default:"-" }}</td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                        {% endif %}
+
+                    {% endif %}
+                {% else %}
+                    <p style="text-align:center; color:#a0a0c0;">No result found.</p>
+                {% endif %}
+
+                <div style="text-align: center;">
+                    <a href="{% url 'virus_total' %}" class="btn-back">
+                        <i class="fas fa-arrow-left"></i> Scan Another Item
+                    </a>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        // JS to animate circle if malicious count > 0
+        document.addEventListener('DOMContentLoaded', () => {
+            const circle = document.querySelector('.circle-progress');
+            if(circle) {
+                // Logic to set stroke-dasharray based on malicious count vs total
+                // This is simplified; assumes total engines ~90-100 for visual effect
+                const malicious = parseInt(document.querySelector('.circle-count').innerText);
+                const total = 100; 
+                const percentage = (malicious / total) * 100;
+                circle.setAttribute('stroke-dasharray', `${percentage}, 100`);
+            }
+        });
+    </script>
+</body>
+</html>

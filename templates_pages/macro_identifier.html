@@ -1,0 +1,548 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NETPULSE | Macro Identifier</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        /* --- CORE THEME --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --cyber-blue: #00f3ff;
+            --cyber-purple: #9d00ff;
+            --cyber-dark: #0a0a0f;
+            --cyber-darker: #05050a;
+            --cyber-gray: #1a1a2e;
+            --cyber-light: #e6e6e6;
+            --cyber-green: #00ff9d;
+            --cyber-red: #ff0055;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--cyber-darker);
+            color: var(--cyber-light);
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- BACKGROUND EFFECTS --- */
+        .cyber-effects {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 1;
+        }
+        .scan-line {
+            position: absolute; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent);
+            top: 0; animation: scan 3s linear infinite; opacity: 0.3;
+        }
+        .grid-overlay {
+            position: absolute; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px; opacity: 0.2;
+        }
+        .data-point {
+            position: absolute; width: 4px; height: 4px; background: var(--cyber-blue);
+            border-radius: 50%; animation: pulse 2s infinite; opacity: 0.5;
+        }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.5); opacity: 1; } }
+
+        /* --- HEADER & NAV --- */
+        .cyber-header {
+            background: linear-gradient(135deg, var(--cyber-darker) 0%, var(--cyber-gray) 50%, var(--cyber-darker) 100%);
+            position: relative; z-index: 5000; overflow: visible;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 2; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+        .logo-container { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { font-size: 2rem; color: var(--cyber-blue); text-shadow: 0 0 10px var(--cyber-blue); }
+        .logo-text {
+            font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 700;
+            background: linear-gradient(45deg, var(--cyber-blue), var(--cyber-purple));
+            -webkit-background-clip: text; -moz-background-clip: text; background-clip: text;
+            color: transparent;
+        }
+        .nav-list { display: flex; list-style: none; gap: 30px; align-items: center; }
+        .nav-link {
+            color: var(--cyber-light); text-decoration: none; font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem; padding: 10px 15px; border-radius: 4px; transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-link:hover, .nav-link.active { color: var(--cyber-blue); background: rgba(0, 243, 255, 0.1); }
+        
+        /* Dropdown */
+        .nav-item.dropdown { position: relative; cursor: pointer; }
+        .dropdown-menu {
+            display: none; position: absolute; top: 100%; margin-top: -5px; left: 0;
+            background: var(--cyber-darker); border: 1px solid var(--cyber-blue);
+            min-width: 240px; z-index: 10000; padding: 10px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .dropdown-menu::before { content: ""; position: absolute; top: -20px; left: 0; width: 100%; height: 20px; }
+        .nav-item.dropdown:hover .dropdown-menu { display: block; animation: fadeIn 0.2s ease-in-out; }
+        .dropdown-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+            color: var(--cyber-light); text-decoration: none; font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem; transition: all 0.2s; border-left: 3px solid transparent;
+        }
+        .dropdown-item:hover { background: rgba(0, 243, 255, 0.05); color: var(--cyber-blue); border-left: 3px solid var(--cyber-blue); }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* --- MACRO SECTION STYLES --- */
+        .macro-section { padding: 60px 0; position: relative; z-index: 2; flex: 1; }
+
+        .macro-container {
+            background: var(--cyber-gray);
+            border: 1px solid rgba(0, 243, 255, 0.1);
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+            max-width: 1100px;
+            margin: 0 auto;
+            position: relative;
+            overflow: hidden;
+            padding-bottom: 60px;
+        }
+        .macro-container::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px;
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue));
+        }
+
+        h1 {
+            font-family: 'Orbitron', sans-serif; font-size: 2.5rem; color: var(--cyber-blue);
+            margin-bottom: 30px; display: flex; align-items: center; justify-content: center; gap: 15px;
+            text-shadow: 0 0 10px rgba(0, 243, 255, 0.3);
+        }
+
+        h3 {
+            color: #a0a0c0; margin-top: 30px; border-bottom: 1px solid rgba(77, 140, 255, 0.1);
+            padding-bottom: 10px; font-family: 'Orbitron', sans-serif; font-size: 1.2rem;
+        }
+
+        /* Upload Area */
+        .upload-area {
+            border: 2px dashed rgba(0, 243, 255, 0.3); border-radius: 10px; padding: 40px; text-align: center;
+            margin-bottom: 30px; background: rgba(0, 0, 0, 0.2); transition: all 0.3s;
+            max-width: 800px; margin-left: auto; margin-right: auto;
+        }
+        .upload-area:hover { background: rgba(0, 243, 255, 0.05); border-color: var(--cyber-blue); }
+        .upload-area svg { width: 64px; height: 64px; color: var(--cyber-blue); margin-bottom: 20px; }
+        
+        input[type="file"] { display: none; }
+        
+        .file-label {
+            display: inline-block; padding: 12px 30px;
+            background: rgba(0, 243, 255, 0.1); color: var(--cyber-blue); border: 1px solid var(--cyber-blue);
+            border-radius: 5px; font-weight: 500; cursor: pointer; transition: all 0.3s;
+            font-family: 'Orbitron', sans-serif;
+        }
+        .file-label:hover { background: var(--cyber-blue); color: black; box-shadow: 0 0 20px rgba(0, 243, 255, 0.4); }
+        .file-info { margin-top: 15px; color: #a0a0c0; font-size: 0.9rem; }
+
+        .submit-btn {
+            width: 100%; padding: 15px;
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue));
+            color: white; border: none; border-radius: 5px;
+            font-family: 'Orbitron', sans-serif; font-size: 1.1rem; font-weight: 600;
+            cursor: pointer; transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px;
+            margin-top: 20px;
+        }
+        .submit-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 0 25px rgba(157, 0, 255, 0.5); }
+        .submit-btn:disabled { background: #333; color: #666; cursor: not-allowed; }
+
+        /* --- SPLIT GRID LAYOUT --- */
+        .results-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 25px;
+            margin-top: 30px; height: 550px;
+        }
+
+        /* Grid Card */
+        .grid-card {
+            background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(0, 243, 255, 0.1);
+            border-radius: 10px; padding: 25px; height: 100%; display: flex; flex-direction: column;
+            overflow-y: auto; scrollbar-width: thin; scrollbar-color: var(--cyber-blue) rgba(0,0,0,0.3);
+        }
+        .grid-card::-webkit-scrollbar { width: 6px; }
+        .grid-card::-webkit-scrollbar-track { background: rgba(0,0,0,0.3); }
+        .grid-card::-webkit-scrollbar-thumb { background: var(--cyber-blue); border-radius: 3px; }
+
+        /* Terminal Box */
+        .terminal-box {
+            background: #05050a; color: #00ff9d; font-family: 'Courier New', monospace;
+            padding: 20px; border-radius: 5px; border: 1px solid rgba(0, 243, 255, 0.2);
+            flex-grow: 1; white-space: pre-wrap; line-height: 1.5; font-size: 0.9rem;
+            margin-bottom: 20px; box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+        }
+
+        /* AI Button */
+        .ai-button {
+            width: 100%; padding: 15px;
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            border: 1px solid rgba(139, 92, 246, 0.5); color: white;
+            border-radius: 5px; font-weight: 600; cursor: pointer; transition: all 0.3s;
+            display: flex; justify-content: center; align-items: center; gap: 10px; margin-top: auto;
+            font-family: 'Orbitron', sans-serif;
+        }
+        .ai-button:hover {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            box-shadow: 0 0 20px rgba(139, 92, 246, 0.4); transform: translateY(-2px);
+        }
+
+        /* Results Styling */
+        .status-badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 500; margin-bottom: 15px; font-family: 'Orbitron', sans-serif; }
+        .status-safe { background: rgba(0, 255, 157, 0.1); color: var(--cyber-green); border: 1px solid var(--cyber-green); }
+        .status-low, .status-medium { background: rgba(255, 215, 0, 0.1); color: #ffd700; border: 1px solid #ffd700; }
+        .status-high { background: rgba(255, 0, 85, 0.1); color: var(--cyber-red); border: 1px solid var(--cyber-red); }
+        .status-critical { background: rgba(255, 0, 85, 0.2); color: var(--cyber-red); font-weight: 700; border: 1px solid var(--cyber-red); box-shadow: 0 0 10px var(--cyber-red); }
+
+        .info-row { display: flex; justify-content: space-between; padding: 12px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .info-label { color: var(--cyber-blue); font-size: 0.9rem; }
+        .info-value { color: white; text-align: right; font-family: 'Courier New', monospace; }
+
+        .threat-box { background: rgba(255, 0, 85, 0.05); border-left: 3px solid var(--cyber-red); padding: 15px; margin-top: 20px; }
+        .threat-item { margin-bottom: 10px; padding-bottom: 10px; border-bottom: 1px solid rgba(255, 0, 85, 0.1); }
+        .threat-item strong { color: var(--cyber-red); }
+
+        .module-header { background: rgba(0, 243, 255, 0.1); padding: 10px; margin-top: 15px; border-radius: 5px 5px 0 0; }
+        .module-code { background: #0a0a0f; padding: 15px; border-radius: 0 0 5px 5px; border: 1px solid rgba(0, 243, 255, 0.1); color: #ccc; font-family: 'Courier New', monospace; font-size: 0.85rem; overflow-x: auto; }
+
+        /* Navigation Buttons */
+        .bottom-nav { 
+            display: flex; gap: 20px; margin-top: 60px; justify-content: center; flex-wrap: wrap;
+        }
+        .nav-btn { 
+            min-width: 200px; padding: 12px 30px; background: transparent;
+            color: var(--cyber-blue); border: 1px solid var(--cyber-blue);
+            border-radius: 5px; font-weight: 500; text-align: center; cursor: pointer; transition: all 0.3s;
+            font-family: 'Orbitron', sans-serif;
+        }
+        .nav-btn:hover { background: var(--cyber-blue); color: black; box-shadow: 0 0 15px rgba(0, 243, 255, 0.4); }
+
+        /* Loading Spinner */
+        .btn-loading { color: transparent !important; position: relative; }
+        .btn-loading::after {
+            content: ''; position: absolute; width: 20px; height: 20px; top: 50%; left: 50%; margin-left: -10px; margin-top: -10px;
+            border: 2px solid transparent; border-top: 2px solid white; border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Footer */
+        .cyber-footer { background: var(--cyber-darker); padding: 40px 0; margin-top: auto; border-top: 1px solid rgba(0, 243, 255, 0.1); text-align: center; }
+        .copyright { color: #a0a0c0; font-size: 0.9rem; }
+
+        @media (max-width: 900px) {
+            .results-grid { grid-template-columns: 1fr; height: auto; }
+            .grid-card { height: auto; max-height: 500px; }
+            .macro-container { padding: 25px; width: 95%; }
+        }
+        /* --- CUSTOM SCROLLBAR STYLES --- */
+    html { scrollbar-width: thin; scrollbar-color: var(--cyber-blue) var(--cyber-darker); }
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: var(--cyber-darker); }
+    ::-webkit-scrollbar-thumb { background-color: var(--cyber-blue); border-radius: 5px; border: 2px solid var(--cyber-darker); }
+    ::-webkit-scrollbar-thumb:hover { background-color: var(--cyber-purple); box-shadow: 0 0 10px var(--cyber-blue); }
+    </style>
+</head>
+<body>
+
+    <div class="cyber-effects">
+        <div class="scan-line"></div>
+        <div class="grid-overlay"></div>
+        <div class="data-point" style="top: 15%; left: 20%;"></div>
+        <div class="data-point" style="top: 70%; left: 80%;"></div>
+    </div>
+
+    <div class="cyber-header">
+        <header class="header">
+            <div class="container">
+                <nav class="navbar">
+                    <a class="navbar-brand" href="">
+                        <div class="logo-container">
+                            <i class="fas fa-satellite-dish logo-icon"></i>
+                            <span class="logo-text">NETPULSE</span>
+                        </div>
+                    </a>
+                    <div class="nav-menu">
+                        <ul class="nav-list">
+                            <li class="nav-item"><a class="nav-link" href="{% url 'index' %}"><i class="fas fa-home"></i> Home</a></li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link active" href="{% url 'index' %}"><i class="fas fa-tools"></i> Tools <i class="fas fa-chevron-down" style="font-size: 0.8em; margin-left: 5px;"></i></a>
+                               <div class="dropdown-menu">
+                                    <a href="{% url 'upload' %}" class="dropdown-item"><i class="fas fa-file-code"></i> PCAP Analysis</a>
+                                    <a href="{% url 'sniff_page' %}" class="dropdown-item"><i class="fas fa-broadcast-tower"></i> Live Analysis</a>
+                                    <a href="{% url 'live_dashboard' %}" class="dropdown-item"><i class="fas fa-tachometer-alt"></i> Live Dashboard</a>
+                                    <a href="{% url 'ip_analysis' %}" class="dropdown-item"><i class="fas fa-network-wired"></i> Network Tools</a>
+                                    <a href="{% url 'virus_total' %}" class="dropdown-item"><i class="fas fa-shield-virus"></i> Threat Scanner</a>
+                                    <a href="{% url 'macro_identifier' %}" class="dropdown-item"><i class="fas fa-code"></i> Macro Analyzer</a>
+                                    <a href="{% url 'powershell_analyzer' %}" class="dropdown-item"><i class="fas fa-terminal"></i> PowerShell Analyzer</a>
+                                </div>
+                            </li>
+                            <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-shield-alt"></i> Dashboard</a></li>
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+        </header>
+    </div>
+
+    <main class="macro-section">
+        <div class="container">
+            <div class="macro-container" data-aos="fade-up">
+                <h1>
+                    <i class="fas fa-file-code" style="margin-right: 15px;"></i>
+                    Office Macro Identifier
+                </h1>
+
+                <div class="content-wrapper">
+                    {% if error %}
+                        <div style="background: rgba(255, 0, 85, 0.1); border-left: 4px solid var(--cyber-red); padding: 15px; color: var(--cyber-red); margin-bottom: 20px; border-radius: 4px;">
+                            <i class="fas fa-exclamation-triangle"></i> {{ error }}
+                        </div>
+                    {% endif %}
+
+                    {% if not file_uploaded %}
+                    <form method="post" enctype="multipart/form-data" id="uploadForm">
+                        {% csrf_token %}
+                        <div class="upload-area">
+                            <i class="fas fa-cloud-upload-alt fa-3x" style="color: var(--cyber-blue); margin-bottom: 20px;"></i>
+                            <p style="margin-bottom: 15px; font-size: 1.1rem; color: #fff;">Upload Office Document for Macro Analysis</p>
+                            <label for="file-upload" class="file-label">Choose File</label>
+                            <input id="file-upload" type="file" name="office_file" accept=".doc,.docx,.xls,.xlsx,.ppt,.pptx,.docm,.xlsm,.pptm" required onchange="updateFileName(this)">
+                            <p class="file-info" id="file-info">Supported: .doc, .docx, .xls, .xlsx, .ppt, .pptx, .docm, .xlsm, .pptm</p>
+                        </div>
+                        <button type="submit" id="submitBtn" class="submit-btn" disabled>
+                            <i class="fas fa-search"></i> Analyze Document
+                        </button>
+                    </form>
+                    {% endif %}
+
+                    {% if results %}
+                        {{ results|json_script:"scan-results-data" }}
+                        
+                        <h3>Analysis Results for: <span style="color: var(--cyber-blue);">{{ filename }}</span></h3>
+                        
+                        <div class="results-grid">
+                            
+                            <div class="grid-card">
+                                <span class="status-badge status-{{ results.risk_level|lower }}">
+                                    Risk Level: {{ results.risk_level }}
+                                </span>
+
+                                <div class="info-row">
+                                    <span class="info-label">Macros Detected:</span>
+                                    <span class="info-value">
+                                        {% if results.has_macros %}
+                                            <span style="color: var(--cyber-red)">Yes</span>
+                                        {% else %}
+                                            <span style="color: var(--cyber-green)">No</span>
+                                        {% endif %}
+                                    </span>
+                                </div>
+
+                                {% if results.macro_type %}
+                                <div class="info-row">
+                                    <span class="info-label">Macro Type:</span>
+                                    <span class="info-value">{{ results.macro_type }}</span>
+                                </div>
+                                {% endif %}
+
+                                {% if results.vba_modules %}
+                                <div class="info-row">
+                                    <span class="info-label">VBA Modules:</span>
+                                    <span class="info-value">{{ results.vba_modules|length }}</span>
+                                </div>
+                                {% endif %}
+
+                                {% if results.threat_score > 0 %}
+                                <div class="info-row">
+                                    <span class="info-label">Threat Score:</span>
+                                    <span class="info-value" style="color: var(--cyber-red); font-weight: bold;">
+                                        {{ results.threat_score }}
+                                    </span>
+                                </div>
+                                {% endif %}
+
+                                {% if results.details %}
+                                <div style="margin-top: 20px;">
+                                    <h4 style="color: var(--cyber-blue); font-family: 'Orbitron'; font-size: 0.9rem;">Details:</h4>
+                                    <ul class="details-list">
+                                        {% for detail in results.details %}
+                                            <li>{{ detail }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                                {% endif %}
+
+                                {% if results.threats %}
+                                <div class="threat-box">
+                                    <h4 style="color: var(--cyber-red); margin-bottom: 15px; font-family: 'Orbitron'; font-size: 0.9rem;">⚠ Suspicious Patterns:</h4>
+                                    {% for threat in results.threats %}
+                                    <div class="threat-item">
+                                        <div style="display:flex; justify-content:space-between;">
+                                            <strong>{{ threat.pattern }}</strong>
+                                            <span style="color: var(--cyber-red); font-size: 0.8rem;">Sev: {{ threat.severity }}</span>
+                                        </div>
+                                        <div style="color: #a0a0c0; font-size: 0.85rem; margin-top: 5px;">
+                                            {{ threat.description }}
+                                        </div>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+
+                                {% if results.macro_code %}
+                                <div style="margin-top: 25px;">
+                                    <h4 style="color: var(--cyber-blue); font-family: 'Orbitron'; font-size: 0.9rem;">Extracted Code:</h4>
+                                    {% for macro in results.macro_code %}
+                                    <div class="macro-module">
+                                        <div class="module-header">
+                                            <strong style="color: var(--cyber-blue);">{{ macro.module_name }}</strong>
+                                        </div>
+                                        <pre class="module-code"><code>{{ macro.code }}</code></pre>
+                                    </div>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="grid-card">
+                                <h2 style="color: #8b5cf6; margin-top: 0; display:flex; align-items:center; gap:10px; border-bottom: 1px solid #8b5cf6; padding-bottom: 15px; font-size: 1.1rem; font-family: 'Orbitron';">
+                                    <i class="fas fa-robot"></i> Gemini AI Security Assessment
+                                </h2>
+                                
+                                <div id="ai-output" class="terminal-box"></div>
+
+                                <button type="button" class="ai-button" id="aiBtn" onclick="generateAIReport()">
+                                    <i class="fas fa-magic"></i> Generate AI Report
+                                </button>
+                            </div>
+
+                        </div>
+                        <div class="bottom-nav">
+                            <form method="get" style="margin: 0;">
+                                <button type="submit" class="nav-btn"><i class="fas fa-redo"></i> Analyze Another File</button>
+                            </form>
+                            <form action="{% url 'index' %}" method="get" style="margin: 0;">
+                                <button type="submit" class="nav-btn"><i class="fas fa-home"></i> Back Home</button>
+                            </form>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="cyber-footer">
+        <div class="container">
+            <p class="copyright">&copy; 2026 NETPULSE. All rights reserved. | Cybersecurity Platform</p>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({ duration: 1000, once: true });
+
+        function updateFileName(input) {
+            const fileInfo = document.getElementById('file-info');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (input.files && input.files[0]) {
+                const fileName = input.files[0].name;
+                const fileSize = (input.files[0].size / 1024 / 1024).toFixed(2);
+                fileInfo.textContent = 'Selected: ' + fileName + ' (' + fileSize + ' MB)';
+                fileInfo.style.color = 'var(--cyber-blue)';
+                submitBtn.disabled = false;
+            } else {
+                fileInfo.textContent = 'Supported: .doc, .docx, .xls, .xlsx, .ppt, .pptx, .docm, .xlsm, .pptm';
+                fileInfo.style.color = '#a0c4ff';
+                submitBtn.disabled = true;
+            }
+        }
+
+        if(document.getElementById('uploadForm')) {
+            document.getElementById('uploadForm').addEventListener('submit', function() {
+                const submitBtn = document.getElementById('submitBtn');
+                submitBtn.disabled = true;
+                submitBtn.classList.add('btn-loading');
+                submitBtn.innerHTML = 'Analyzing...';
+            });
+        }
+
+        // --- AI REPORT LOGIC ---
+        function generateAIReport() {
+            const btn = document.getElementById('aiBtn');
+            const outputBox = document.getElementById('ai-output');
+
+            // 1. Get the data
+            const scanData = JSON.parse(document.getElementById('scan-results-data').textContent);
+
+            // 2. UI Loading State
+            btn.classList.add('btn-loading');
+            btn.disabled = true;
+            btn.innerHTML = 'Analyzing...';
+            
+            // Show typing cursor effect or loading text in terminal
+            outputBox.innerHTML = '<span style="color: #444;">> Connection established...<br>> Sending data to Gemini AI...<br>> Analyzing threat vectors...</span><br><span class="btn-loading" style="display:inline-block; width:10px; height:10px;"></span>';
+
+            // 3. Send Request
+            fetch('/generate-report/', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ scan_results: scanData })
+            })
+            .then(response => response.json())
+            .then(data => {
+                // 4. Reset Button
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+                btn.innerHTML = 'Regenerate Report';
+
+                if (data.success) {
+                    // 5. Typewriter Effect for the response
+                    typeWriter(data.report, outputBox);
+                } else {
+                    outputBox.innerHTML += '<br><br><span style="color: #ff4444;">> Error: ' + (data.error || "Unknown error") + '</span>';
+                }
+            })
+            .catch(error => {
+                btn.classList.remove('btn-loading');
+                btn.disabled = false;
+                btn.innerHTML = 'Retry Connection';
+                outputBox.innerHTML += '<br><br><span style="color: #ff4444;">> Critical Error: Failed to connect to server.</span>';
+                console.error('Error:', error);
+            });
+        }
+
+        // Simple Typewriter Effect
+        function typeWriter(text, element) {
+            element.innerHTML = "> Report Generated Successfully.<br><br>";
+            let i = 0;
+            const speed = 5; // typing speed
+            
+            function type() {
+                if (i < text.length) {
+                    element.innerHTML += text.charAt(i);
+                    i++;
+                    element.scrollTop = element.scrollHeight; // Auto scroll to bottom
+                    setTimeout(type, speed);
+                }
+            }
+            type();
+        }
+    </script>
+</body>
+</html>

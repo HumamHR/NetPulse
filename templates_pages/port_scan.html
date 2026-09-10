@@ -1,0 +1,487 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NETPULSE | Local Port Monitor</title>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+
+    <style>
+        /* --- CORE THEME (Kept your existing styles) --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --cyber-blue: #00f3ff;
+            --cyber-purple: #9d00ff;
+            --cyber-dark: #0a0a0f;
+            --cyber-darker: #05050a;
+            --cyber-gray: #1a1a2e;
+            --cyber-light: #e6e6e6;
+            --cyber-green: #00ff9d;
+            --cyber-red: #ff0055;
+            --cyber-yellow: #ffd700;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--cyber-darker);
+            color: var(--cyber-light);
+            overflow-x: hidden;
+            position: relative;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- BACKGROUND EFFECTS --- */
+        .cyber-effects { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 1; }
+        .scan-line {
+            position: absolute; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent);
+            top: 0; animation: scan 3s linear infinite; opacity: 0.3;
+        }
+        .grid-overlay {
+            position: absolute; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                            linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px; opacity: 0.2;
+        }
+        .data-point {
+            position: absolute; width: 4px; height: 4px; background: var(--cyber-blue);
+            border-radius: 50%; animation: pulse 2s infinite; opacity: 0.5;
+        }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+        @keyframes pulse { 0%, 100% { transform: scale(1); opacity: 0.5; } 50% { transform: scale(1.5); opacity: 1; } }
+
+        /* --- HEADER --- */
+        .cyber-header {
+            background: linear-gradient(135deg, var(--cyber-darker) 0%, var(--cyber-gray) 50%, var(--cyber-darker) 100%);
+            position: relative; z-index: 5000; overflow: visible; border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+        }
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; position: relative; z-index: 2; }
+        .navbar { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; }
+        .logo-container { display: flex; align-items: center; gap: 10px; }
+        .logo-icon { font-size: 2rem; color: var(--cyber-blue); text-shadow: 0 0 10px var(--cyber-blue); }
+        .logo-text {
+            font-family: 'Orbitron', sans-serif; font-size: 1.8rem; font-weight: 700;
+            background: linear-gradient(45deg, var(--cyber-blue), var(--cyber-purple));
+            -webkit-background-clip: text; -moz-background-clip: text; background-clip: text;
+            color: transparent;
+        }
+        .nav-list { display: flex; list-style: none; gap: 30px; align-items: center; }
+        .nav-link {
+            color: var(--cyber-light); text-decoration: none; font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem; padding: 10px 15px; border-radius: 4px; transition: all 0.3s ease;
+            display: flex; align-items: center; gap: 8px;
+        }
+        .nav-link:hover, .nav-link.active { color: var(--cyber-blue); background: rgba(0, 243, 255, 0.1); }
+        
+        /* Dropdown */
+        .nav-item.dropdown { position: relative; cursor: pointer; }
+        .dropdown-menu {
+            display: none; position: absolute; top: 100%; margin-top: -5px; left: 0;
+            background: var(--cyber-darker); border: 1px solid var(--cyber-blue);
+            min-width: 240px; z-index: 10000; padding: 10px 0;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+        }
+        .dropdown-menu::before { content: ""; position: absolute; top: -20px; left: 0; width: 100%; height: 20px; }
+        .nav-item.dropdown:hover .dropdown-menu { display: block; animation: fadeIn 0.2s ease-in-out; }
+        .dropdown-item {
+            display: flex; align-items: center; gap: 12px; padding: 12px 20px;
+            color: var(--cyber-light); text-decoration: none; font-family: 'Orbitron', sans-serif;
+            font-size: 0.9rem; transition: all 0.2s; border-left: 3px solid transparent;
+        }
+        .dropdown-item:hover { background: rgba(0, 243, 255, 0.05); color: var(--cyber-blue); border-left: 3px solid var(--cyber-blue); }
+
+        /* --- MAIN CONTENT --- */
+        .main-section { padding: 60px 0; flex: 1; }
+        .section-header { text-align: center; margin-bottom: 40px; }
+        .section-title {
+            font-family: 'Orbitron', sans-serif; font-size: 2.5rem; color: var(--cyber-light);
+            margin-bottom: 15px; display: inline-block; position: relative;
+        }
+        .section-title::after {
+            content: ''; position: absolute; bottom: -10px; left: 50%; transform: translateX(-50%);
+            width: 100px; height: 3px; background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent);
+        }
+
+        /* --- PORT SCANNER STYLES --- */
+        .cyber-panel {
+            background: var(--cyber-gray);
+            border: 1px solid rgba(0, 243, 255, 0.1);
+            border-radius: 15px; padding: 40px;
+            box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
+            max-width: 800px; margin: 0 auto;
+            position: relative; overflow: hidden;
+            animation: slideUp 0.8s ease-out;
+        }
+        .cyber-panel::before {
+            content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 3px;
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue));
+        }
+
+        /* Form Elements */
+        .input-group { margin-bottom: 20px; }
+        .cyber-label {
+            display: block; font-family: 'Orbitron'; font-size: 0.9rem;
+            color: var(--cyber-blue); margin-bottom: 10px;
+        }
+        
+        .cyber-input {
+            width: 100%; padding: 12px 15px;
+            background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white; border-radius: 5px; font-family: 'Roboto'; font-size: 1rem;
+            transition: all 0.3s;
+        }
+        .cyber-input:focus { outline: none; border-color: var(--cyber-blue); box-shadow: 0 0 15px rgba(0, 243, 255, 0.2); }
+
+        /* NEW: Static Target Display */
+        .static-target-display {
+            width: 100%; padding: 15px;
+            background: rgba(0, 243, 255, 0.05); 
+            border: 1px solid var(--cyber-blue);
+            color: var(--cyber-blue); 
+            border-radius: 5px; 
+            font-family: 'Orbitron', sans-serif; 
+            font-weight: bold;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .cyber-input-small {
+            width: 100px; display: inline-block; padding: 8px; margin: 0 10px;
+            background: rgba(0, 0, 0, 0.3); border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white; border-radius: 4px; text-align: center;
+        }
+
+        /* Scan Options Container */
+        .scan-options-container {
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 8px; padding: 20px; margin-bottom: 25px;
+        }
+        
+        .option-item {
+            display: flex; align-items: center; margin-bottom: 12px;
+            padding: 10px; border-radius: 4px; transition: background 0.3s;
+        }
+        .option-item:hover { background: rgba(0, 243, 255, 0.05); }
+        .option-item label { cursor: pointer; color: #e6e6e6; font-size: 0.95rem; flex: 1; }
+        
+        /* Custom Radio */
+        input[type="radio"] {
+            appearance: none; width: 18px; height: 18px;
+            border: 2px solid var(--cyber-blue); border-radius: 50%;
+            margin-right: 15px; cursor: pointer; position: relative;
+        }
+        input[type="radio"]:checked { background: var(--cyber-blue); box-shadow: 0 0 10px var(--cyber-blue); }
+
+        .port-range {
+            display: none; margin-top: 10px; margin-left: 35px;
+            align-items: center; color: #a0a0c0; font-size: 0.9rem;
+        }
+
+        /* Button */
+        .cyber-btn {
+            font-family: 'Orbitron', sans-serif; width: 100%; padding: 15px;
+            border-radius: 5px; border: none; font-weight: 700; cursor: pointer;
+            transition: all 0.3s; text-transform: uppercase; letter-spacing: 1px;
+            background: linear-gradient(90deg, var(--cyber-purple), var(--cyber-blue));
+            color: white;
+        }
+        .cyber-btn:hover { transform: translateY(-2px); box-shadow: 0 0 20px rgba(0, 243, 255, 0.4); }
+
+        /* Loader */
+        .btn-loading { position: relative; color: transparent !important; }
+        .btn-loading::after {
+            content: ''; position: absolute; left: 50%; top: 50%; width: 20px; height: 20px;
+            margin: -10px 0 0 -10px; border: 2px solid white; border-top-color: transparent;
+            border-radius: 50%; animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Results Area */
+        .results-box {
+            margin-top: 40px; background: rgba(0, 0, 0, 0.2);
+            border-top: 1px solid rgba(0, 243, 255, 0.2); padding-top: 20px;
+        }
+        .result-header h2 { font-family: 'Orbitron'; color: var(--cyber-blue); margin-bottom: 15px; font-size: 1.5rem; }
+        .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 25px; }
+        .info-card { background: rgba(255,255,255,0.05); padding: 15px; border-radius: 4px; border-left: 2px solid var(--cyber-purple); }
+        .info-label { font-size: 0.8rem; color: #a0a0c0; display: block; margin-bottom: 5px; text-transform: uppercase; }
+        .info-value { color: white; font-family: 'Courier New'; font-weight: bold; }
+
+        /* Cyber Table */
+        .cyber-table-container { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th {
+            background: rgba(0, 243, 255, 0.1); color: var(--cyber-blue);
+            text-align: left; padding: 12px 15px; font-family: 'Orbitron'; font-size: 0.85rem;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+        }
+        td { padding: 12px 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); color: #ccc; font-family: 'Courier New'; }
+        tr:hover { background: rgba(0, 243, 255, 0.05); }
+
+        .status-badge {
+            display: inline-block; padding: 4px 10px; border-radius: 4px; font-size: 0.75rem; font-family: 'Orbitron';
+        }
+        .status-open { background: rgba(0, 255, 157, 0.1); color: var(--cyber-green); border: 1px solid var(--cyber-green); }
+        .status-closed { background: rgba(255, 0, 85, 0.1); color: var(--cyber-red); border: 1px solid var(--cyber-red); }
+
+        /* Footer */
+        .cyber-footer { background: var(--cyber-darker); padding: 40px 0; border-top: 1px solid rgba(0, 243, 255, 0.1); text-align: center; margin-top: auto; }
+        .copyright { color: #a0a0c0; font-size: 0.9rem; }
+        /* --- CUSTOM SCROLLBAR STYLES --- */
+    html { scrollbar-width: thin; scrollbar-color: var(--cyber-blue) var(--cyber-darker); }
+    ::-webkit-scrollbar { width: 10px; }
+    ::-webkit-scrollbar-track { background: var(--cyber-darker); }
+    ::-webkit-scrollbar-thumb { background-color: var(--cyber-blue); border-radius: 5px; border: 2px solid var(--cyber-darker); }
+    ::-webkit-scrollbar-thumb:hover { background-color: var(--cyber-purple); box-shadow: 0 0 10px var(--cyber-blue); }
+    </style>
+</head>
+<body>
+
+    <div class="cyber-effects">
+        <div class="scan-line"></div>
+        <div class="grid-overlay"></div>
+        <div class="data-point" style="top: 15%; left: 10%;"></div>
+        <div class="data-point" style="top: 70%; left: 85%;"></div>
+    </div>
+
+    <div class="cyber-header">
+        <header class="header">
+            <div class="container">
+                <nav class="navbar">
+                    <a class="navbar-brand" href="#">
+                        <div class="logo-container">
+                            <i class="fas fa-satellite-dish logo-icon"></i>
+                            <span class="logo-text">NETPULSE</span>
+                        </div>
+                    </a>
+                    <div class="nav-menu">
+                        <ul class="nav-list">
+                            <li class="nav-item"><a class="nav-link" href="{% url 'index' %}"><i class="fas fa-home"></i> Home</a></li>
+                            <li class="nav-item dropdown">
+                                <a class="nav-link active" href="#"><i class="fas fa-tools"></i> Tools <i class="fas fa-chevron-down" style="font-size: 0.8em; margin-left: 5px;"></i></a>
+                                <div class="dropdown-menu">
+                                    <a href="{% url 'upload' %}" class="dropdown-item"><i class="fas fa-file-code"></i> PCAP Analysis</a>
+                                    <a href="{% url 'sniff_page' %}" class="dropdown-item"><i class="fas fa-broadcast-tower"></i> Live Analysis</a>
+                                    <a href="{% url 'live_dashboard' %}" class="dropdown-item"><i class="fas fa-tachometer-alt"></i> Live Dashboard</a>
+                                    <a href="{% url 'ip_analysis' %}" class="dropdown-item"><i class="fas fa-network-wired"></i> Network Tools</a>
+                                    <a href="{% url 'virus_total' %}" class="dropdown-item"><i class="fas fa-shield-virus"></i> Threat Scanner</a>
+                                    <a href="{% url 'macro_identifier' %}" class="dropdown-item"><i class="fas fa-code"></i> Macro Analyzer</a>
+                                    <a href="{% url 'powershell_analyzer' %}" class="dropdown-item"><i class="fas fa-terminal"></i> PowerShell Analyzer</a>
+                                </div>
+                            </li>
+                            <li class="nav-item"><a class="nav-link" href="#"><i class="fas fa-shield-alt"></i> Dashboard</a></li>
+                        </ul>
+                    </div>
+                </nav>
+            </div>
+        </header>
+    </div>
+
+    <main class="main-section">
+        <div class="container">
+            <div class="section-header" data-aos="fade-down">
+                <h1 class="section-title">Local Port Monitor</h1>
+                <p style="color: #a0a0c0;">Analyze open ports and services running on this machine (Localhost).</p>
+            </div>
+
+            <div class="cyber-panel">
+                <form method="POST" id="scanForm">
+                    {% csrf_token %}
+                    
+                    <div class="input-group">
+                        <label class="cyber-label"><i class="fas fa-server"></i> TARGET SYSTEM</label>
+                        <div class="static-target-display">
+                            <i class="fas fa-laptop-code"></i> LOCALHOST (127.0.0.1)
+                        </div>
+                        <input type="hidden" name="target" value="127.0.0.1">
+                    </div>
+
+                    <input type="hidden" name="start_port" id="realStartPort" value="1">
+                    <input type="hidden" name="end_port" id="realEndPort" value="1024">
+
+                    <label class="cyber-label"><i class="fas fa-sliders-h"></i> SCAN CONFIGURATION</label>
+                    <div class="scan-options-container">
+                        <div class="option-item">
+                            <input type="radio" id="fat-scan" name="scan_type" value="fat" checked>
+                            <label for="fat-scan"><strong>Fast Scan:</strong> Top 1024 Common Ports</label>
+                        </div>
+                        
+                        <div class="option-item">
+                            <input type="radio" id="confined-scan" name="scan_type" value="confined">
+                            <label for="confined-scan"><strong>Custom Range:</strong> Specify start and end ports</label>
+                        </div>
+                        
+                        <div class="port-range" id="confinedRange">
+                            RANGE: 
+                            <input type="number" id="visibleStartPort" class="cyber-input-small" min="1" max="65535" value="1">
+                            TO
+                            <input type="number" id="visibleEndPort" class="cyber-input-small" min="1" max="65535" value="100">
+                        </div>
+                        
+                        <div class="option-item">
+                            <input type="radio" id="full-scan" name="scan_type" value="full">
+                            <label for="full-scan"><strong>Full Scan:</strong> All 65,535 Ports (Slow)</label>
+                        </div>
+                    </div>
+
+                    <button type="submit" id="scanBtn" class="cyber-btn">
+                        <i class="fas fa-radar"></i> INITIATE LOCAL SCAN
+                    </button>
+                </form>
+
+                {% if error_message %}
+                    <div style="margin-top:20px; padding:15px; background:rgba(255,0,85,0.1); border:1px solid var(--cyber-red); color:var(--cyber-red); border-radius:4px; text-align:center;">
+                        <i class="fas fa-exclamation-circle"></i> {{ error_message }}
+                    </div>
+                {% endif %}
+
+                {% if scan_results %}
+                    <div class="results-box" data-aos="fade-up">
+                        <div class="result-header">
+                            <h2><i class="fas fa-check-circle"></i> Scan Complete</h2>
+                        </div>
+                        
+                        <div class="info-grid">
+                            <div class="info-card">
+                                <span class="info-label">Target IP</span>
+                                <span class="info-value">{{ scan_results.ip_address }}</span>
+                            </div>
+                            <div class="info-card">
+                                <span class="info-label">Hostname</span>
+                                <span class="info-value">{{ scan_results.hostname }}</span>
+                            </div>
+                            <div class="info-card">
+                                <span class="info-label">Status</span>
+                                <span class="info-value" style="color: var(--cyber-green);">{{ scan_results.state }}</span>
+                            </div>
+                        </div>
+
+                        <div class="cyber-table-container">
+                            <table>
+                                <thead>
+                                    <tr>
+                                        <th>Port</th>
+                                        <th>Protocol</th>
+                                        <th>State</th>
+                                        <th>Service</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% if scan_results.open_ports %}
+                                        {% for port in scan_results.open_ports %}
+                                        <tr>
+                                            <td>{{ port.port }}</td>
+                                            <td>{{ port.protocol|default:"TCP" }}</td>
+                                            <td><span class="status-badge status-open">OPEN</span></td>
+                                            <td>{{ port.service|default:"Unknown" }}</td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="4" style="text-align:center; padding: 30px; font-style:italic;">No open ports found within the scanned range.</td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </main>
+
+    <footer class="cyber-footer">
+        <div class="container">
+            <p class="copyright">&copy; 2026 NETPULSE. All rights reserved. | Cybersecurity Platform</p>
+        </div>
+    </footer>
+
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script>
+        AOS.init({ duration: 1000, once: true });
+
+        // Port Range Logic
+        const scanTypeRadios = document.querySelectorAll('input[name="scan_type"]');
+        const confinedRange = document.getElementById('confinedRange');
+        const confinedScanRadio = document.getElementById('confined-scan');
+        const realStartPort = document.getElementById('realStartPort');
+        const realEndPort = document.getElementById('realEndPort');
+        const visibleStartPort = document.getElementById('visibleStartPort');
+        const visibleEndPort = document.getElementById('visibleEndPort');
+
+        function updatePortSettings() {
+            if (confinedScanRadio.checked) {
+                confinedRange.style.display = 'flex';
+                // Trigger animation
+                confinedRange.style.opacity = '0';
+                setTimeout(() => { confinedRange.style.transition = 'opacity 0.3s'; confinedRange.style.opacity = '1'; }, 10);
+            } else {
+                confinedRange.style.display = 'none';
+            }
+        }
+
+        scanTypeRadios.forEach(radio => {
+            radio.addEventListener('change', updatePortSettings);
+        });
+
+        // Initialize on load
+        updatePortSettings();
+
+        // Handle Scan Button Animation & Data Sync
+        document.getElementById('scanForm').addEventListener('submit', function(e) {
+            const scanBtn = document.getElementById('scanBtn');
+            const scanType = document.querySelector('input[name="scan_type"]:checked').value;
+            
+            // Validate & Sync Ports
+            if (scanType === 'fat') {
+                realStartPort.value = '1';
+                realEndPort.value = '1024';
+            } 
+            else if (scanType === 'confined') {
+                const start = parseInt(visibleStartPort.value);
+                const end = parseInt(visibleEndPort.value);
+                
+                if (isNaN(start) || isNaN(end)) {
+                    alert('Please enter valid port numbers');
+                    e.preventDefault(); return;
+                }
+                if (start < 1 || end > 65535) {
+                    alert('Ports must be between 1 and 65535');
+                    e.preventDefault(); return;
+                }
+                if (start > end) {
+                    alert('Start port must be less than end port');
+                    e.preventDefault(); return;
+                }
+                
+                realStartPort.value = start;
+                realEndPort.value = end;
+            }
+            else { // full
+                realStartPort.value = '1';
+                realEndPort.value = '65535';
+            }
+
+            // Button Loading State
+            scanBtn.disabled = true;
+            scanBtn.classList.add('btn-loading');
+            scanBtn.innerHTML = 'SCANNING LOCALHOST...';
+        });
+
+        // Auto-select confined radio when clicking inputs
+        visibleStartPort.addEventListener('focus', () => { confinedScanRadio.click(); });
+        visibleEndPort.addEventListener('focus', () => { confinedScanRadio.click(); });
+
+    </script>
+</body>
+</html>

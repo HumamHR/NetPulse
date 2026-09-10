@@ -1,0 +1,1601 @@
+{% load static %}
+{% load custom_filters %}
+{% load file_filters %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NETPULSE | Analysis Results</title>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    
+    <link href="https://cdn.jsdelivr.net/npm/simple-datatables@7.1.2/dist/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script type="text/javascript" src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+   <style>
+        /* --- CORE THEME --- */
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        :root {
+            --cyber-blue: #00f3ff;
+            --cyber-purple: #9d00ff;
+            --cyber-dark: #0a0a0f;
+            --cyber-darker: #05050a;
+            --cyber-gray: #1a1a2e;
+            --cyber-light: #e6e6e6;
+            --cyber-green: #00ff9d;
+            --cyber-red: #ff0055;
+        }
+
+        body {
+            font-family: 'Roboto', sans-serif;
+            background: var(--cyber-darker);
+            color: var(--cyber-light);
+            overflow: hidden; 
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* --- BACKGROUND EFFECTS --- */
+        .cyber-effects {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 0;
+        }
+        .scan-line {
+            position: absolute; width: 100%; height: 2px;
+            background: linear-gradient(90deg, transparent, var(--cyber-blue), transparent);
+            top: 0; animation: scan 3s linear infinite; opacity: 0.3;
+        }
+        .grid-overlay {
+            position: absolute; width: 100%; height: 100%;
+            background-image: linear-gradient(rgba(0, 243, 255, 0.05) 1px, transparent 1px),
+                              linear-gradient(90deg, rgba(0, 243, 255, 0.05) 1px, transparent 1px);
+            background-size: 50px 50px; opacity: 0.2;
+        }
+        @keyframes scan { 0% { top: 0; } 100% { top: 100%; } }
+
+        /* --- HEADER --- */
+        .cyber-header {
+            background: linear-gradient(135deg, var(--cyber-darker) 0%, var(--cyber-gray) 50%, var(--cyber-darker) 100%);
+            position: relative; z-index: 5000; border-bottom: 1px solid rgba(0, 243, 255, 0.1);
+            height: 60px; display: flex; align-items: center; padding: 0 20px;
+        }
+        .logo-text {
+            font-family: 'Orbitron', sans-serif; font-size: 1.5rem; font-weight: 700;
+            background: linear-gradient(45deg, var(--cyber-blue), var(--cyber-purple));
+            -webkit-background-clip: text; -moz-background-clip: text; background-clip: text;
+            color: transparent; display: flex; align-items: center; gap: 10px;
+        }
+        .nav-links a {
+            color: var(--cyber-light); text-decoration: none; margin-left: 20px; font-family: 'Orbitron'; font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+        .nav-links a:hover { color: var(--cyber-blue); }
+
+        /* --- MAIN LAYOUT --- */
+        .main-wrapper {
+            display: flex; flex: 1; height: calc(100vh - 60px); position: relative; z-index: 2;
+        }
+
+        /* Sidebar - UPDATED WITH CUSTOM SCROLLBAR */
+        .sidebar {
+            width: 250px; 
+            background: var(--cyber-gray); 
+            border-right: 1px solid rgba(0, 243, 255, 0.1);
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto;
+            
+            /* Firefox Scrollbar Support */
+            scrollbar-width: thin;
+            scrollbar-color: var(--cyber-blue) var(--cyber-darker);
+        }
+        
+        /* Custom Blue Scrollbar for Sidebar (Chrome/Edge/Safari) */
+        .sidebar::-webkit-scrollbar { width: 6px; }
+        .sidebar::-webkit-scrollbar-track { background: var(--cyber-darker); }
+        .sidebar::-webkit-scrollbar-thumb { background: var(--cyber-blue); border-radius: 3px; }
+        .sidebar::-webkit-scrollbar-thumb:hover { background: #00c2cc; }
+
+        .sidebar-item {
+            padding: 15px 20px; color: #a0a0c0; cursor: pointer; transition: all 0.2s;
+            border-left: 3px solid transparent; font-family: 'Orbitron', sans-serif; font-size: 0.9rem;
+        }
+        .sidebar-item:hover { background: rgba(0, 243, 255, 0.05); color: white; }
+        .sidebar-item.active {
+            background: rgba(0, 243, 255, 0.1); color: var(--cyber-blue); border-left: 3px solid var(--cyber-blue);
+        }
+
+        /* Content Area */
+        .main-content {
+            flex: 1; padding: 30px; overflow-y: auto; background: rgba(0,0,0,0.2);
+            scrollbar-width: thin; scrollbar-color: var(--cyber-blue) var(--cyber-darker);
+        }
+        .main-content::-webkit-scrollbar { width: 8px; }
+        .main-content::-webkit-scrollbar-track { background: var(--cyber-darker); }
+        .main-content::-webkit-scrollbar-thumb { background: var(--cyber-blue); border-radius: 4px; }
+
+        /* Typography */
+        h1 {
+            font-family: 'Orbitron', sans-serif; color: var(--cyber-blue); margin-bottom: 25px;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.3); padding-bottom: 10px; display: inline-block;
+        }
+        h3 { font-family: 'Orbitron'; color: white; margin-bottom: 15px; font-size: 1.1rem; }
+
+        /* Stats Cards */
+        .stat-cards {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 30px;
+        }
+        .stat-card {
+            background: rgba(255,255,255,0.05); padding: 20px; border-radius: 8px; border: 1px solid rgba(0, 243, 255, 0.1);
+            text-align: center; transition: transform 0.3s;
+        }
+        .stat-card:hover { transform: translateY(-5px); border-color: var(--cyber-blue); }
+        .stat-card h3 { color: #a0a0c0; font-size: 0.9rem; text-transform: uppercase; margin-bottom: 5px; }
+        .stat-card p { font-family: 'Orbitron'; font-size: 1.8rem; color: white; font-weight: 700; margin: 0; }
+
+        /* Tables */
+        .scrollable-table-container { overflow-x: auto; background: rgba(0,0,0,0.3); border-radius: 8px; border: 1px solid rgba(0, 243, 255, 0.1); }
+        table { width: 100%; border-collapse: collapse; color: #ccc; }
+        th {
+            background: rgba(0, 243, 255, 0.1); color: var(--cyber-blue); text-align: left; padding: 12px 15px;
+            font-family: 'Orbitron'; font-size: 0.85rem; border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+        }
+        td { padding: 12px 15px; border-bottom: 1px solid rgba(255, 255, 255, 0.05); font-size: 0.9rem; }
+        tr:hover { background: rgba(0, 243, 255, 0.05); }
+        
+        .protocol-cell { color: var(--cyber-blue); font-weight: 500; font-family: 'Courier New'; }
+        .type-cell { color: #a0a0c0; text-transform: uppercase; font-size: 0.8rem; }
+        .details-cell { font-family: 'Courier New'; word-break: break-all; }
+        
+        /* NEW: Class to allow text wrapping for long certificate subjects */
+        .allow-wrap {
+            white-space: normal !important;
+            word-break: break-word !important;
+            max-width: 500px; /* Prevents cell from getting too wide */
+        }
+        
+        .packet-cell { color: var(--cyber-red); font-weight: bold; text-align: center !important; font-family: 'Courier New'; }
+
+        /* Charts */
+        .chart-container {
+            background: rgba(0,0,0,0.3); padding: 20px; border-radius: 8px; border: 1px solid rgba(0, 243, 255, 0.1);
+            height: 400px; position: relative; margin-bottom: 20px; width: 100%;
+        }
+        #protocolChart { width: 100% !important; height: 100% !important; }
+
+        /* Warnings */
+        .security-warning {
+            background: rgba(255, 0, 85, 0.1); border-left: 4px solid var(--cyber-red); color: var(--cyber-red);
+            padding: 15px; margin-bottom: 20px; border-radius: 4px; display: flex; align-items: center; gap: 10px;
+        }
+
+        /* Buttons */
+        .report-actions { display: flex; gap: 15px; margin-top: 20px; justify-content: center; }
+        .download-button, .report-button {
+            display: inline-flex; align-items: center; gap: 8px; padding: 10px 20px;
+            background: transparent; border: 1px solid var(--cyber-blue); color: var(--cyber-blue);
+            border-radius: 5px; text-decoration: none; font-family: 'Orbitron'; font-size: 0.9rem;
+            transition: all 0.3s; cursor: pointer;
+        }
+        .report-button { background: var(--cyber-blue); color: black; }
+        .download-button:hover, .report-button:hover {
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.4); transform: translateY(-2px);
+        }
+        .download-button:hover { background: rgba(0, 243, 255, 0.1); }
+
+        /* --- NETWORK GRAPH STYLES --- */
+        .flowchart-wrapper {
+            position: relative; width: 100%; height: 500px;
+            background: rgba(10, 20, 40, 0.5); border: 1px solid rgba(77, 140, 255, 0.2);
+            border-radius: 8px; overflow: hidden;
+        }
+        #network-graph { width: 100%; height: 100%; background: radial-gradient(circle at center, #1a2035 0%, #0a0a0f 100%); }
+        .graph-controls {
+            position: absolute; bottom: 15px; left: 15px; background: rgba(0, 0, 0, 0.7);
+            padding: 8px 15px; border-radius: 20px; border: 1px solid rgba(77, 140, 255, 0.3);
+            display: flex; align-items: center; gap: 15px; pointer-events: none;
+        }
+        .legend-item { color: white; font-family: 'Orbitron', sans-serif; font-size: 0.8rem; display: flex; align-items: center; gap: 6px; }
+        .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+        .dot.host { background: #00f3ff; box-shadow: 0 0 8px #00f3ff; }
+        .dot.router { background: #9d00ff; box-shadow: 0 0 8px #9d00ff; }
+
+        /* --- GRID LAYOUT (For MAC/Hosts tabs) --- */
+        .results-grid {
+            display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
+            height: auto; max-height: none; /* Let content dictate height */
+        }
+        .grid-card {
+            background: rgba(10, 20, 40, 0.5); border: 1px solid rgba(77, 140, 255, 0.2);
+            border-radius: 8px; padding: 20px; height: 100%; display: flex; flex-direction: column;
+        }
+
+        /* --- FAST ANIMATION LOGIC --- */
+        .tab-content { 
+            display: none; 
+            opacity: 0; 
+            transform: translateY(10px); 
+            transition: opacity 0.15s ease-out, transform 0.15s ease-out; /* Fast, Smooth */
+        }
+        .tab-content.display-block { display: block; }
+        .tab-content.visible { opacity: 1; transform: translateY(0); }
+        .no-results { text-align: center; padding: 40px; color: #a0a0c0; font-style: italic; }
+
+        /* --- GEO MAP LAYOUT --- */
+        .geo-container {
+            display: grid;
+            grid-template-columns: 2fr 1fr; /* Map gets 2/3 space, Table gets 1/3 */
+            gap: 20px;
+            height: 550px; /* Fixed height for container */
+        }
+        
+        .map-box {
+            height: 100%;
+            border-radius: 8px;
+            border: 1px solid var(--cyber-blue);
+            overflow: hidden;
+            position: relative;
+            background-color: #0a0a0f; /* Match map background to theme */
+        }
+
+        #mapid { 
+            height: 100%; 
+            width: 100%; 
+            z-index: 1; 
+            border: none; 
+            background: transparent;
+        }
+        
+        /* Override Leaflet z-indexes to sit behind your custom header */
+        .leaflet-pane { z-index: 1 !important; }
+        .leaflet-top, .leaflet-bottom { z-index: 2 !important; }
+
+        /* --- IP LIST TABLE STYLES --- */
+        .skipped-box {
+            background: rgba(10, 20, 40, 0.5);
+            border: 1px solid rgba(77, 140, 255, 0.2);
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            overflow: hidden;
+        }
+        .skipped-header {
+            padding: 15px;
+            border-bottom: 1px solid rgba(0, 243, 255, 0.2);
+            color: var(--cyber-blue);
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            display: flex; align-items: center; gap: 10px;
+        }
+        .skipped-content {
+            flex: 1;
+            overflow-y: auto;
+            scrollbar-width: thin;
+        }
+        .skipped-table { width: 100%; border-collapse: collapse; }
+        .skipped-table th { font-size: 0.8rem; padding: 10px; background: rgba(0,0,0,0.3); position: sticky; top: 0; }
+        .skipped-table td { font-size: 0.85rem; padding: 8px 10px; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        
+        /* Tag style for ports */
+        .port-tag {
+            background: rgba(0, 243, 255, 0.1); color: var(--cyber-blue);
+            border: 1px solid var(--cyber-blue); padding: 2px 6px;
+            border-radius: 4px; font-size: 0.8rem; margin-right: 4px; margin-bottom: 4px;
+            display: inline-block;
+        }
+
+    </style>
+</head>
+<body>
+
+    {% if protocol_distribution %}
+        {{ protocol_distribution|json_script:"protocol-data" }}
+    {% endif %}
+
+    {% if flowchart_path %}
+        {{ flowchart_path|json_script:"network-data" }}
+    {% endif %}
+    
+    {% if sessions_data %}
+        {{ sessions_data|json_script:"sessions-data" }}
+    {% endif %}
+
+    {% if data.timeline_data %}
+        {{ data.timeline_data|json_script:"timeline-data-json" }}
+    {% endif %}
+
+    <div class="cyber-effects">
+        <div class="scan-line"></div>
+        <div class="grid-overlay"></div>
+    </div>
+
+    <header class="cyber-header">
+        <div class="logo-text">
+            <i class="fas fa-satellite-dish"></i> NETPULSE
+        </div>
+        <div class="nav-links" style="margin-left: auto;">
+            <a href="{% url 'index' %}">Home</a>
+            <a href="{% url 'upload' %}">New Scan</a>
+        </div>
+    </header>
+
+    <div class="main-wrapper">
+        
+        <div class="sidebar">
+            <div class="sidebar-item active" data-tab="overview"><i class="fas fa-chart-pie"></i> Overview</div>
+            <div class="sidebar-item" data-tab="protocols"><i class="fas fa-chart-bar"></i> Protocols</div>
+            <div class="sidebar-item" data-tab="hosts"><i class="fas fa-server"></i> Hosts</div>
+            <div class="sidebar-item" data-tab="abuseip"><i class="fas fa-shield-alt"></i> Abuse IP Check</div>
+            <div class="sidebar-item" data-tab="http_headers"><i class="fas fa-list-alt"></i> HTTP Headers</div>
+            <div class="sidebar-item" data-tab="geomap"><i class="fas fa-globe-americas"></i> Geo Map</div>
+            <div class="sidebar-item" data-tab="openports"><i class="fas fa-door-open"></i> Open Ports</div>
+            <div class="sidebar-item" data-tab="mac"><i class="fas fa-ethernet"></i> MAC Addresses</div>
+            <div class="sidebar-item" data-tab="sessions"><i class="fas fa-exchange-alt"></i> Sessions</div>
+            <div class="sidebar-item" data-tab="objects"><i class="fas fa-file-download"></i> HTTP Objects</div>
+            <div class="sidebar-item" data-tab="credentials"><i class="fas fa-key"></i> Credentials</div>
+            
+            <div class="sidebar-item" data-tab="tls"><i class="fas fa-lock"></i> TLS / SSL</div>
+
+            <div class="sidebar-item" data-tab="malicious" style="color: var(--cyber-red);"><i class="fas fa-bug"></i> Malicious</div>
+            <div class="sidebar-item" data-tab="suspicious"><i class="fas fa-exclamation-triangle"></i> Malformed</div>
+            <div class="sidebar-item" data-tab="control"><i class="fas fa-project-diagram"></i> Flowchart</div>
+            <div class="sidebar-item" data-tab="report"><i class="fas fa-file-alt"></i> Final Report</div>
+        </div>
+
+        <div class="main-content">
+            
+            <div id="overview" class="tab-content active">
+                <h1>Scan Overview</h1>
+                
+                <div class="stat-cards">
+                    <div class="stat-card">
+                        <h3>Total Packets</h3>
+                        <p>{{ results.stats.total_packets|default:"0" }}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Unique IPs</h3>
+                        <p>{{ results.stats.total_unique_ips|default:"0" }}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Sessions</h3>
+                        <p>{{ ip_pairs|length|default:"0" }}</p>
+                    </div>
+                    <div class="stat-card" style="border-color: var(--cyber-red);">
+                        <h3 style="color: var(--cyber-red);">Threats Found</h3>
+                        <p style="color: var(--cyber-red);">{{ malicious_count|default:"0" }}</p>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 30px;">
+                    
+                    <div class="grid-card">
+                        <h3 style="color: var(--cyber-purple); border-bottom: 1px solid rgba(157,0,255,0.2); padding-bottom: 10px; margin-bottom: 15px;">
+                            <i class="fas fa-chart-pie"></i> Protocol Breakdown
+                        </h3>
+                        <div style="height: 250px; position: relative; width: 100%;">
+                            <canvas id="overviewProtocolChart"></canvas>
+                        </div>
+                    </div>
+
+                    <div class="grid-card">
+                        <h3 style="color: var(--cyber-blue); border-bottom: 1px solid rgba(0,243,255,0.2); padding-bottom: 10px; margin-bottom: 15px;">
+                            <i class="fas fa-chart-bar"></i> Top Active IPs (Sent Packets)
+                        </h3>
+                        <div style="height: 250px; position: relative; width: 100%;">
+                            <canvas id="overviewTopIpsChart"></canvas>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div class="grid-card" style="margin-top: 20px;">
+                    <h3 style="color: var(--cyber-green); border-bottom: 1px solid rgba(0,255,157,0.2); padding-bottom: 10px; margin-bottom: 15px;">
+                        <i class="fas fa-wave-square"></i> Traffic Capture Timeline (Peaks)
+                    </h3>
+                    <div style="height: 300px; position: relative; width: 100%;">
+                        <canvas id="timelineChart"></canvas>
+                    </div>
+                </div>
+
+            </div>
+            
+            <div id="openports" class="tab-content">
+                <h1>Open Ports Detected</h1>
+                <div style="background: rgba(10, 20, 40, 0.5); padding: 15px; border-left: 3px solid var(--cyber-blue); margin-bottom: 20px;">
+                    <p style="color: #ccc; font-size: 0.9rem;">
+                        <i class="fas fa-info-circle" style="color: var(--cyber-blue);"></i> 
+                        These ports were identified as "Open" because a <strong>TCP SYN-ACK (0x12)</strong> packet was seen responding from them.
+                    </p>
+                </div>
+                
+                {% if open_ports %}
+                    <div class="scrollable-table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Server IP</th>
+                                    <th>Open Ports</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for ip, ports in open_ports.items %}
+                                    <tr>
+                                        <td class="protocol-cell">{{ ip }}</td>
+                                        <td>
+                                            {% for port in ports %}
+                                                <span class="port-tag">{{ port }}</span>
+                                            {% endfor %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="no-results">No open ports detected in this capture.</p>
+                {% endif %}
+            </div>
+
+            <div id="abuseip" class="tab-content">
+                <h1><i class="fas fa-shield-alt" style="color: var(--cyber-red);"></i> AbuseIPDB Threat Intelligence</h1>
+                
+                <h3 style="color: var(--cyber-blue); border-bottom: 1px solid rgba(0,243,255,0.2); padding-bottom: 10px; margin-bottom: 15px;">
+                    <i class="fas fa-globe"></i> Public Internet Hosts (Scanned)
+                </h3>
+
+                {% if data.abuse_data.scanned %}
+                    <div class="scrollable-table-container">
+                        <table style="border-collapse: separate; border-spacing: 0 5px;">
+                            <thead>
+                                <tr>
+                                    <th>IP Address</th>
+                                    <th>Abuse Score</th>
+                                    <th>ISP / Country</th>
+                                    <th>Reports</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in data.abuse_data.scanned %}
+                                    <tr style="background: rgba(10, 20, 40, 0.5);">
+                                        <td class="protocol-cell" style="font-size: 1rem; border-top-left-radius: 5px; border-bottom-left-radius: 5px;">
+                                            <a href="https://www.abuseipdb.com/check/{{ item.ip }}" target="_blank" style="color: var(--cyber-blue); text-decoration: none;">
+                                                {{ item.ip }} <i class="fas fa-external-link-alt" style="font-size: 0.7rem;"></i>
+                                            </a>
+                                        </td>
+                                        
+                                        <td>
+                                            {% if item.score == 0 %}
+                                                <span style="color: #00ff9d; font-weight: bold;"><i class="fas fa-check-circle"></i> 0% (Safe)</span>
+                                            {% elif item.score < 25 %}
+                                                <span style="color: #ffff00; font-weight: bold;">{{ item.score }}% (Suspicious)</span>
+                                            {% else %}
+                                                <span style="color: #ff0055; font-weight: bold; text-shadow: 0 0 5px #ff0055;">
+                                                    <i class="fas fa-exclamation-triangle"></i> {{ item.score }}% (Malicious)
+                                                </span>
+                                            {% endif %}
+                                        </td>
+
+                                        <td class="details-cell">
+                                            <div style="font-weight: bold; color: #fff;">{{ item.isp }}</div>
+                                            <div style="font-size: 0.8rem; color: #888;">{{ item.country }}</div>
+                                        </td>
+                                        
+                                        <td style="font-family: 'Orbitron';">{{ item.total_reports }}</td>
+                                        
+                                        <td style="border-top-right-radius: 5px; border-bottom-right-radius: 5px;">
+                                            {% if item.reports and item.reports|length > 0 %}
+                                                <button class="report-button toggle-comments-btn" style="padding: 5px 15px; font-size: 0.8rem; cursor: pointer;">
+                                                    <i class="fas fa-comments"></i> View {{ item.reports|length }} Comments
+                                                </button>
+                                            {% else %}
+                                                <span style="color: #666; font-style: italic; font-size: 0.8rem;">No comments</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+
+                                    <tr class="comments-row" style="display: none;">
+                                        <td colspan="5" style="padding: 0; border: none;">
+                                            <div style="background: rgba(0,0,0,0.3); border-left: 3px solid var(--cyber-blue); margin: 5px 20px 15px 20px; padding: 15px;">
+                                                <h4 style="color: var(--cyber-blue); margin-bottom: 10px; font-family: 'Orbitron'; font-size: 0.9rem;">
+                                                    <i class="fas fa-history"></i> Recent Report History
+                                                </h4>
+                                                <div style="max-height: 300px; overflow-y: auto;">
+                                                    {% for report in item.reports %}
+                                                        <div style="background: rgba(255,255,255,0.03); padding: 10px; margin-bottom: 10px; border-radius: 4px;">
+                                                            <div style="display: flex; justify-content: space-between; margin-bottom: 5px;">
+                                                                <span style="color: #00ff9d; font-size: 0.8rem; font-weight: bold;">
+                                                                    Reported on {{ report.reportedAt|slice:":10" }}
+                                                                </span>
+                                                            </div>
+                                                            <div style="color: #ddd; font-family: 'Courier New'; font-size: 0.85rem;">
+                                                                "{{ report.comment|default:"No comment." }}"
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="no-results">No Public IPs found to scan or API rate limit exceeded.</p>
+                {% endif %}
+
+                {% if data.abuse_data.skipped %}
+                    <h3 style="color: #888; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 10px; margin-top: 40px; margin-bottom: 15px;">
+                        <i class="fas fa-network-wired"></i> Local / Private IPs (Skipped)
+                    </h3>
+                    <div style="background: rgba(255, 255, 255, 0.02); padding: 15px; border-radius: 8px; border: 1px solid rgba(255, 255, 255, 0.05);">
+                        <p style="font-size: 0.85rem; color: #aaa; margin-bottom: 15px;">
+                            These IPs belong to Private Networks (LAN) or Reserved ranges. They are not routable on the public internet and cannot be scanned for reputation.
+                        </p>
+                        <div style="display: flex; flex-wrap: wrap; gap: 10px;">
+                            {% for ip in data.abuse_data.skipped %}
+                                <span style="background: rgba(0,0,0,0.4); color: #888; padding: 5px 10px; border-radius: 4px; font-family: 'Courier New'; border: 1px solid rgba(255,255,255,0.1);">
+                                    {{ ip }}
+                                </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div id="http_headers" class="tab-content">
+                <h1>HTTP & HTTPS Headers</h1>
+                
+                <div style="background: rgba(10, 20, 40, 0.5); padding: 15px; border-left: 3px solid var(--cyber-blue); margin-bottom: 20px;">
+                    <p style="color: #ccc; font-size: 0.9rem;">
+                        <i class="fas fa-info-circle" style="color: var(--cyber-blue);"></i> 
+                        Shows headers from plaintext <strong>HTTP</strong> (Port 80) and decrypted <strong>HTTPS</strong> (via WAF/Mitmproxy). Traffic is automatically split into Outgoing Requests and Incoming Responses.
+                    </p>
+                </div>
+
+                {% if data.http_headers %}
+                    
+                    <h3 style="color: var(--cyber-blue); border-bottom: 1px solid rgba(0,243,255,0.2); padding-bottom: 10px; margin-top: 20px; margin-bottom: 15px;">
+                        <i class="fas fa-sign-out-alt"></i> Outgoing Headers (Requests)
+                    </h3>
+                    <div class="scrollable-table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 100px;">Time</th>
+                                    <th style="width: 80px;">Type</th>
+                                    <th style="width: 80px;">Method</th>
+                                    <th>Host / URL</th>
+                                    <th>User-Agent</th>
+                                    <th style="width: 100px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in data.http_headers %}
+                                    {% if item.url != '-' and item.url != '' %}
+                                        <tr>
+                                            <td class="type-cell">{{ item.timestamp }}</td>
+                                            <td>
+                                                {% if "HTTPS" in item.type %}
+                                                    <span style="color: #00ff9d; font-weight: bold; border: 1px solid #00ff9d; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">HTTPS</span>
+                                                {% else %}
+                                                    <span style="color: #00f3ff; font-weight: bold; border: 1px solid #00f3ff; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">HTTP</span>
+                                                {% endif %}
+                                            </td>
+                                            <td class="protocol-cell">{{ item.method }}</td>
+                                            <td class="details-cell">
+                                                <strong style="color: #fff;">{{ item.host }}</strong><br>
+                                                <span style="color: #888; font-size: 0.8rem;">{{ item.url|truncatechars:60 }}</span>
+                                            </td>
+                                            <td class="details-cell" style="font-size: 0.8rem; color: #aaa;">
+                                                {{ item.user_agent|truncatechars:40 }}
+                                            </td>
+                                            <td>
+                                                <button class="report-button" onclick="toggleHeaders(this)" style="padding: 5px 10px; font-size: 0.75rem;">
+                                                    <i class="fas fa-expand"></i> Details
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr class="headers-row" style="display: none; background: rgba(0,0,0,0.2);">
+                                            <td colspan="6" style="padding: 15px;">
+                                                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; font-family: 'Courier New'; font-size: 0.85rem; color: #00f3ff;">
+                                                    {% for key, value in item.full_headers.items %}
+                                                        <div><strong style="color: #fff;">{{ key }}:</strong> {{ value }}</div>
+                                                    {% endfor %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h3 style="color: var(--cyber-green); border-bottom: 1px solid rgba(0,255,157,0.2); padding-bottom: 10px; margin-top: 40px; margin-bottom: 15px;">
+                        <i class="fas fa-sign-in-alt"></i> Incoming Headers (Responses)
+                    </h3>
+                    <div class="scrollable-table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 100px;">Time</th>
+                                    <th style="width: 80px;">Type</th>
+                                    <th style="width: 100px;">Status Code</th>
+                                    <th>Host</th>
+                                    <th style="width: 100px;">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in data.http_headers %}
+                                    {% if item.url == '-' or item.url == '' %}
+                                        <tr>
+                                            <td class="type-cell">{{ item.timestamp }}</td>
+                                            <td>
+                                                {% if "HTTPS" in item.type %}
+                                                    <span style="color: #00ff9d; font-weight: bold; border: 1px solid #00ff9d; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">HTTPS</span>
+                                                {% else %}
+                                                    <span style="color: #00f3ff; font-weight: bold; border: 1px solid #00f3ff; padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">HTTP</span>
+                                                {% endif %}
+                                            </td>
+                                            <td>
+                                                <span style="color: #ffca28; font-weight: bold; font-family: 'Courier New';">{{ item.method }}</span>
+                                            </td>
+                                            <td class="details-cell">
+                                                <strong style="color: #fff;">{{ item.host }}</strong>
+                                            </td>
+                                            <td>
+                                                <button class="report-button" onclick="toggleHeaders(this)" style="padding: 5px 10px; font-size: 0.75rem; background: transparent; border-color: var(--cyber-green); color: var(--cyber-green);">
+                                                    <i class="fas fa-expand"></i> Details
+                                                </button>
+                                            </td>
+                                        </tr>
+                                        <tr class="headers-row" style="display: none; background: rgba(0,0,0,0.2);">
+                                            <td colspan="5" style="padding: 15px;">
+                                                <div style="background: rgba(255,255,255,0.05); padding: 15px; border-radius: 5px; font-family: 'Courier New'; font-size: 0.85rem; color: #00ff9d;">
+                                                    {% for key, value in item.full_headers.items %}
+                                                        <div><strong style="color: #fff;">{{ key }}:</strong> {{ value }}</div>
+                                                    {% endfor %}
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+
+                {% else %}
+                    <p class="no-results">No HTTP/HTTPS headers captured.</p>
+                {% endif %}
+            </div>
+
+            <div id="geomap" class="tab-content">
+                <h1>Geolocation Mapping</h1>
+                
+                <div class="geo-container">
+                    <div class="map-box">
+                        {% if data.geo_data %}
+                            {{ data.geo_data|json_script:"geo-data-json" }}
+                            <div id="mapid"></div>
+                             <div style="position: absolute; bottom: 20px; left: 20px; z-index: 1000; background: rgba(0,0,0,0.7); padding: 10px; border-radius: 5px; display: flex; gap: 15px;">
+                                <div class="legend-item"><span class="dot" style="background: #00f3ff;"></span> Source</div>
+                                <div class="legend-item"><span class="dot" style="background: #ff0055;"></span> Dest</div>
+                            </div>
+                        {% else %}
+                            <div class="no-results" style="height: 100%; display: flex; flex-direction: column; justify-content: center;">
+                                <i class="fas fa-globe-americas" style="font-size: 3rem; margin-bottom: 20px; color: #333;"></i>
+                                <p>No mappable public IPs found.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="skipped-box">
+                        <div class="skipped-header">
+                            <i class="fas fa-list-ul"></i> IP Location Details
+                        </div>
+                        <div class="skipped-content">
+                            {% if data.all_geo_ips %}
+                                <table class="skipped-table">
+                                    <thead>
+                                        <tr>
+                                            <th>IP Address</th>
+                                            <th>Location / Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for item in data.all_geo_ips %}
+                                            <tr>
+                                                <td class="protocol-cell">
+                                                    {% if item.type == 'Source' %}
+                                                        <span style="color: #00f3ff;">{{ item.ip }}</span>
+                                                    {% else %}
+                                                        <span style="color: #ff0055;">{{ item.ip }}</span>
+                                                    {% endif %}
+                                                </td>
+                                                <td class="details-cell" style="font-size: 0.8rem;">
+                                                    {% if item.status == 'Mapped' %}
+                                                        <span style="color: #00ff9d;">{{ item.location }}</span>
+                                                    {% else %}
+                                                        <span style="color: #666; font-style: italic;">{{ item.location }}</span>
+                                                    {% endif %}
+                                                </td>
+                                            </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            {% else %}
+                                <p style="padding: 20px; text-align: center; color: #666;">No IP data found.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="protocols" class="tab-content">
+                <h1>Protocol Distribution</h1>
+                {% if protocol_distribution %}
+                    <div class="chart-container">
+                        <canvas id="protocolChart"></canvas>
+                    </div>
+                {% else %}
+                    <p class="no-results">No protocol data available.</p>
+                {% endif %}
+            </div>
+
+            <div id="hosts" class="tab-content">
+                <h1>Network Hosts</h1>
+                {% if results.stats.unique_src_ips or results.stats.unique_dst_ips %}
+                    <div class="results-grid">
+                        <div class="grid-card">
+                            <h3 style="color: var(--cyber-blue); margin-top: 0; border-bottom: 1px solid var(--cyber-blue); padding-bottom: 10px;">
+                                <i class="fas fa-sign-out-alt"></i> Source IPs
+                            </h3>
+                            <div style="overflow-y: auto; flex: 1;">
+                                {% for ip in results.stats.unique_src_ips %}
+                                    <div class="protocol-cell" style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">{{ ip }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                        <div class="grid-card">
+                            <h3 style="color: var(--cyber-blue); margin-top: 0; border-bottom: 1px solid var(--cyber-blue); padding-bottom: 10px;">
+                                <i class="fas fa-sign-in-alt"></i> Destination IPs
+                            </h3>
+                            <div style="overflow-y: auto; flex: 1;">
+                                {% for ip in results.stats.unique_dst_ips %}
+                                    <div class="protocol-cell" style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">{{ ip }}</div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="no-results">No host data found.</p>
+                {% endif %}
+            </div>
+
+            <div id="mac" class="tab-content">
+                <h1>MAC Addresses</h1>
+                {% if mac_data.unique_src_macs or mac_data.unique_dst_macs %}
+                    <div class="results-grid">
+                        
+                        <div class="grid-card">
+                            <h3 style="color: var(--cyber-blue); margin-top: 0; border-bottom: 1px solid var(--cyber-blue); padding-bottom: 10px;">
+                                <i class="fas fa-sign-out-alt"></i> Source MACs
+                            </h3>
+                            <div style="overflow-y: auto; flex: 1;">
+                                {% for mac in mac_data.unique_src_macs %}
+                                    <div class="protocol-cell" style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                        {{ mac }}
+                                    </div>
+                                {% empty %}
+                                    <p style="color: #666; text-align: center; margin-top: 20px;">No Source MACs found.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="grid-card">
+                            <h3 style="color: var(--cyber-blue); margin-top: 0; border-bottom: 1px solid var(--cyber-blue); padding-bottom: 10px;">
+                                <i class="fas fa-sign-in-alt"></i> Destination MACs
+                            </h3>
+                            <div style="overflow-y: auto; flex: 1;">
+                                {% for mac in mac_data.unique_dst_macs %}
+                                    <div class="protocol-cell" style="padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.05);">
+                                        {{ mac }}
+                                    </div>
+                                {% empty %}
+                                    <p style="color: #666; text-align: center; margin-top: 20px;">No Destination MACs found.</p>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                    </div>
+                {% else %}
+                    <p class="no-results">No MAC addresses found in this capture.</p>
+                    <p style="text-align: center; color: #666; font-size: 0.8rem;">(Note: Layer 2 MAC headers are not present in Layer 3 tunnels like VPNs)</p>
+                {% endif %}
+            </div>
+
+            <div id="sessions" class="tab-content">
+                <h1>Connection Sessions</h1>
+                
+                <h3 style="color: var(--cyber-blue); border-bottom: 1px solid rgba(0,243,255,0.2); padding-bottom: 10px; margin-bottom: 15px;">
+                    <i class="fas fa-network-wired"></i> IPv4 Conversations
+                </h3>
+                
+                {% if ip_pairs_v4 %}
+                    <div class="scrollable-table-container" style="margin-bottom: 30px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 85%;">Source → Destination (IPv4)</th>
+                                    <th style="width: 15%;">Packets</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ipv4-session-tbody">
+                                {% for pair, count in ip_pairs_v4.items %}
+                                    <tr>
+                                        <td class="protocol-cell">{{ pair }}</td>
+                                        <td>{{ count }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="no-results" style="margin-bottom: 30px;">No IPv4 sessions found.</p>
+                {% endif %}
+
+                <h3 style="color: var(--cyber-blue); border-bottom: 1px solid rgba(0,243,255,0.2); padding-bottom: 10px; margin-bottom: 15px;">
+                    <i class="fas fa-project-diagram"></i> IPv6 Conversations
+                </h3>
+
+                {% if ip_pairs_v6 %}
+                    <div class="scrollable-table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 85%;">Source → Destination (IPv6)</th>
+                                    <th style="width: 15%;">Packets</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ipv6-session-tbody">
+                                {% for pair, count in ip_pairs_v6.items %}
+                                    <tr>
+                                        <td class="protocol-cell">{{ pair }}</td>
+                                        <td>{{ count }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="no-results">No IPv6 sessions found.</p>
+                {% endif %}
+            </div>
+
+       <div id="objects" class="tab-content">
+    <h1>Extracted HTTP Objects</h1>
+    {% if http_objects %}
+        <div class="scrollable-table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Filename</th>
+                        <th>Type</th>
+                        <th>Size</th>
+                        <th>MD5</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for obj in http_objects %}
+                        <tr>
+                            <td class="details-cell">{{ obj.filename|default:"unknown" }}</td>
+                            <td class="type-cell">{{ obj.type|default:"unknown" }}</td>
+                            <td>
+                                {% if obj.size is not None %}
+                                    {{ obj.size|filesizeformat }}
+                                {% else %}
+                                    <span style="color: #666;">N/A</span>
+                                {% endif %}
+                            </td>
+                            <td class="type-cell" style="font-size: 0.75rem; max-width: 150px; overflow-wrap: break-word;">
+                                {{ obj.md5|default:"N/A" }}
+                            </td>
+                            <td>
+                                {% if obj.path %}
+                                    <a href="{% url 'download_file' %}?path={{ obj.path|urlencode }}" class="download-button" style="padding: 5px 10px; font-size: 0.8rem;">
+                                        <i class="fas fa-download"></i>
+                                    </a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="no-results">No HTTP objects extracted.</p>
+    {% endif %}
+</div>
+
+            <div id="credentials" class="tab-content">
+                <h1>Extracted Credentials</h1>
+                {% if credentials %}
+                    <div class="security-warning">
+                        <i class="fas fa-exclamation-triangle"></i>
+                        <span>WARNING: Plaintext credentials detected. Handle with care.</span>
+                    </div>
+                    <div class="scrollable-table-container">
+                        <table>
+                            <thead><tr><th>Protocol</th><th>Type</th><th>Details</th></tr></thead>
+                            <tbody>
+                                {% for cred in credentials %}
+                                    <tr>
+                                        <td class="protocol-cell">{{ cred.protocol }}</td>
+                                        <td class="type-cell">{{ cred.type }}</td>
+                                        <td class="details-cell">{{ cred.details }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="no-results">No plaintext credentials found.</p>
+                {% endif %}
+            </div>
+            
+            <div id="tls" class="tab-content">
+                <h1>TLS / SSL Analysis</h1>
+                
+                <h3 style="color: var(--cyber-blue); border-bottom: 1px solid var(--cyber-blue); padding-bottom: 10px; margin-top: 20px;">
+                    <i class="fas fa-fingerprint"></i> Client Fingerprints (JA3) & SNI
+                </h3>
+                
+                {% if data.tls_ja3 %}
+                    <div class="scrollable-table-container" style="max-height: 400px; margin-bottom: 30px;">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Client IP</th>
+                                    <th>Target Domain (SNI)</th>
+                                    <th>Identification (JA3)</th>
+                                    <th>JA3 Hash</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in data.tls_ja3 %}
+                                    <tr>
+                                        <td class="protocol-cell">{{ item.client_ip }}</td>
+                                        
+                                        <td class="details-cell" style="color: #fff; font-weight: bold;">
+                                            {% if item.sni and item.sni != "Unknown" %}
+                                                {{ item.sni }}
+                                            {% else %}
+                                                <span style="color: #666; font-style: italic;">No SNI</span>
+                                            {% endif %}
+                                        </td>
+
+                                        <td>
+                                            {% if item.type == 'malware' %}
+                                                <span style="background: rgba(255, 0, 85, 0.2); color: var(--cyber-red); border: 1px solid var(--cyber-red); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem; font-weight: bold;">
+                                                    <i class="fas fa-bug"></i> {{ item.label }}
+                                                </span>
+                                            {% elif item.type == 'browser' %}
+                                                <span style="background: rgba(0, 255, 157, 0.1); color: var(--cyber-green); border: 1px solid var(--cyber-green); padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                                    <i class="fab fa-chrome"></i> {{ item.label }}
+                                                </span>
+                                            {% elif item.type == 'tool' %}
+                                                <span style="background: rgba(255, 255, 0, 0.1); color: #ffff00; border: 1px solid #ffff00; padding: 2px 8px; border-radius: 4px; font-size: 0.8rem;">
+                                                    <i class="fas fa-terminal"></i> {{ item.label }}
+                                                </span>
+                                            {% else %}
+                                                <span style="color: #666; font-size: 0.8rem;">Unknown Client</span>
+                                            {% endif %}
+                                        </td>
+
+                                        <td class="details-cell" style="font-size: 0.8rem; color: #888;">
+                                            {{ item.ja3_hash }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="no-results" style="margin-bottom: 30px;">No TLS Client Hello packets found (JA3).</p>
+                {% endif %}
+
+                <h3 style="color: var(--cyber-blue); border-bottom: 1px solid var(--cyber-blue); padding-bottom: 10px;">
+                    <i class="fas fa-certificate"></i> Server Certificates & Protocols
+                </h3>
+
+                {% if data.tls_certs %}
+                    <div class="scrollable-table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Server IP</th>
+                                    <th>Server Name</th> <th>Subject / Protocol</th>
+                                    <th>Validity</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for cert in data.tls_certs %}
+                                    <tr>
+                                        <td class="protocol-cell">{{ cert.server_ip }}</td>
+                                        <td class="details-cell" style="color: var(--cyber-blue); font-weight: bold;">
+                                            {{ cert.server_name }}
+                                        </td>
+                                        <td class="details-cell allow-wrap">
+                                            <div style="color: #fff;"><strong>Sub:</strong> {{ cert.subject }}</div>
+                                            <div style="color: #888; font-size: 0.8rem;"><strong>Iss:</strong> {{ cert.issuer }}</div>
+                                        </td>
+                                        <td class="details-cell" style="font-size: 0.85rem;">
+                                            From: {{ cert.not_valid_before }}<br>
+                                            To: {{ cert.not_valid_after }}
+                                        </td>
+                                        <td class="type-cell">
+                                            {% if cert.is_expired %}
+                                                <span style="color: var(--cyber-red); font-weight: bold; border: 1px solid var(--cyber-red); padding: 2px 6px; border-radius: 4px;">WEAK / EXP</span>
+                                            {% elif cert.is_self_signed %}
+                                                <span style="color: #ff9900; font-weight: bold; border: 1px solid #ff9900; padding: 2px 6px; border-radius: 4px;">SELF-SIGNED</span>
+                                            {% else %}
+                                                <span style="color: var(--cyber-green); border: 1px solid var(--cyber-green); padding: 2px 6px; border-radius: 4px;">SECURE</span>
+                                            {% endif %}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="no-results">No TLS Certificates captured.</p>
+                {% endif %}
+            </div>
+
+           <div id="malicious" class="tab-content">
+                <h1 style="color: var(--cyber-red);">Malicious Activity</h1>
+                
+                {% if malicious_packets %}
+                    <div class="security-warning">
+                        <i class="fas fa-biohazard"></i>
+                        <span>CRITICAL: Threats detected matching signature rules (Check for false positives).</span>
+                    </div>
+                    <div class="scrollable-table-container">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width: 25%;">Alert Message</th>
+                                    <th style="width: 10%;">Rule ID</th>
+                                    <th style="width: 55%;">Payload / Evidence</th>
+                                    <th style="width: 10%; text-align: center;">Packet #</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for alert in malicious_packets %}
+                                    <tr>
+                                        <td class="details-cell" style="font-weight: bold; color: var(--cyber-red);">
+                                            {{ alert.msg }}
+                                        </td>
+                                        <td class="type-cell">
+                                            SID: {{ alert.sid }}
+                                        </td>
+                                        <td class="details-cell" style="font-family: 'Courier New'; font-size: 0.85rem; color: #ffca28; word-break: break-all;">
+                                            {{ alert.payload|truncatechars:200 }}
+                                        </td>
+                                        <td class="packet-cell">
+                                            {{ alert.packet_num }}
+                                        </td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="report-actions">
+                        <a href="{% url 'download_malicious_pcap' %}" class="download-button" style="border-color: var(--cyber-red); color: var(--cyber-red);">
+                            <i class="fas fa-download"></i> Download Malicious PCAP
+                        </a>
+                    </div>
+                {% else %}
+                    <p class="no-results">No malicious signatures detected.</p>
+                {% endif %}
+            </div>
+            <div id="suspicious" class="tab-content">
+                <h1>Malformed Packets</h1>
+                {% if alerts %}
+                    <div class="scrollable-table-container">
+                        <table>
+                            <thead><tr><th>Alert Message</th><th style="text-align: center;">Packet #</th></tr></thead>
+                            <tbody>
+                                {% for alert in alerts %}
+                                    <tr>
+                                        <td class="details-cell">{{ alert.msg }}</td>
+                                        <td class="packet-cell">{{ alert.packet_num }}</td>
+                                    </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                {% else %}
+                    <p class="no-results">No malformed packets detected.</p>
+                {% endif %}
+            </div>
+
+            <div id="control" class="tab-content">
+                <h1>Network Flow Diagram</h1>
+                
+                <div class="flowchart-wrapper">
+                    <div id="network-graph"></div>
+                    <div class="graph-controls">
+                        <div class="legend-item"><span class="dot host"></span> Host</div>
+                        <div class="legend-item"><span class="dot router"></span> Gateway</div>
+                        <small style="color: #a0a0c0; margin-left: 15px;">(Scroll to Zoom, Drag to Move)</small>
+                    </div>
+                </div>
+            </div>
+
+            <div id="report" class="tab-content">
+                <h1>Analysis Reports</h1>
+                {% if report_path %}
+                    <div style="text-align: center; margin-top: 40px;">
+                        <i class="fas fa-file-pdf" style="font-size: 4rem; color: var(--cyber-blue); margin-bottom: 20px;"></i>
+                        <h3>Full Analysis Report Generated</h3>
+                        <div class="report-actions">
+                            <a href="{% url 'view_report' %}" target="_blank" class="download-button">View HTML</a>
+                            <a href="{% url 'download_report' %}" class="report-button">Download PDF</a>
+                        </div>
+                    </div>
+                {% else %}
+                    <p class="no-results">Report generation failed.</p>
+                {% endif %}
+            </div>
+
+        </div>
+    </div>
+    
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            let protocolChartInstance = null;
+            let networkGraphInstance = null;
+            let mapInstance = null; 
+            let isAnimating = false; 
+
+            // Timeline Chart Instance
+            let timelineChartInstance = null;
+
+            // --- GLOBAL HELPER: DETECTS MAC/ARP/INVALID IP ---
+            function isValidIp(label) {
+                if (!label) return false;
+                const str = label.toString().trim();
+                
+                // 1. Reject explicit prefixes
+                if (str.startsWith("MAC:") || 
+                    str.startsWith("ARP:") || 
+                    str.startsWith("L2:")) {
+                    return false;
+                }
+                
+                // 2. Reject raw MAC addresses (XX:XX:XX:XX:XX:XX or XX-XX-XX-XX-XX-XX)
+                const macRegex = /^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/;
+                if (macRegex.test(str)) {
+                    return false;
+                }
+
+                // 3. Reject if exactly 5 colons with 12 hex chars (MAC without proper separators)
+                const noSep = str.replace(/[:-]/g, '');
+                if (str.split(':').length === 6 && noSep.length === 12) {
+                    if (/^[0-9A-Fa-f]+$/.test(noSep)) {
+                        return false;
+                    }
+                }
+                
+                // 4. Accept IPv4 pattern (X.X.X.X)
+                const ipv4Regex = /^\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}$/;
+                if (ipv4Regex.test(str)) {
+                    return true;
+                }
+                
+                // 5. Accept IPv6 pattern (at least 2 colons, typically 7 for full format)
+                if (str.includes(':')) {
+                    const colonCount = (str.match(/:/g) || []).length;
+                    if (colonCount >= 7 || str.includes('::')) {
+                        return true;
+                    }
+                }
+
+                // 6. Default reject (prevents MAC leakage)
+                return false;
+            }
+
+            // --- CLEANUP FUNCTION FOR IP TABLES ---
+            function cleanIpTable() {
+                // Helper to clean a specific tbody
+                function cleanTbody(id) {
+                    const tbody = document.getElementById(id);
+                    if (!tbody) return;
+                    
+                    const rows = tbody.querySelectorAll('tr');
+                    rows.forEach(row => {
+                        const cell = row.querySelector('.protocol-cell');
+                        if (cell) {
+                            const text = cell.textContent.trim();
+                            // Allow arrows "->"
+                            if (text.includes("->")) return;
+                            // Validate strictly if no arrow
+                            if (!isValidIp(text)) row.style.display = 'none';
+                        }
+                    });
+                }
+
+                cleanTbody('ipv4-session-tbody');
+                cleanTbody('ipv6-session-tbody');
+            }
+
+            // --- INITIALIZATION ---
+            const initialTab = document.getElementById('overview');
+            if(initialTab) {
+                initialTab.classList.add('display-block');
+                setTimeout(() => initialTab.classList.add('visible'), 20);
+            }
+
+            // Run table cleanup
+            cleanIpTable();
+
+            // --- TAB SWITCHING LOGIC ---
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.addEventListener('click', function() {
+                    if (isAnimating || this.classList.contains('active')) return;
+                    isAnimating = true;
+
+                    document.querySelector('.sidebar-item.active').classList.remove('active');
+                    this.classList.add('active');
+
+                    const currentTab = document.querySelector('.tab-content.visible');
+                    const nextTabId = this.getAttribute('data-tab');
+                    const nextTab = document.getElementById(nextTabId);
+
+                    if (currentTab) {
+                        currentTab.classList.remove('visible');
+                        setTimeout(() => {
+                            currentTab.classList.remove('display-block');
+                            if (nextTab) showNextTab(nextTab, nextTabId);
+                            else isAnimating = false;
+                        }, 150);
+                    } else {
+                        if (nextTab) showNextTab(nextTab, nextTabId);
+                        else isAnimating = false;
+                    }
+                });
+            });
+
+            function showNextTab(nextTab, tabId) {
+                if (!nextTab) { isAnimating = false; return; }
+                nextTab.classList.add('display-block'); 
+                void nextTab.offsetWidth; 
+                nextTab.classList.add('visible'); 
+                
+                setTimeout(() => {
+                    isAnimating = false;
+                    if (tabId === 'protocols') renderProtocolChart();
+                    if (tabId === 'control') renderNetworkGraph();
+                    if (tabId === 'geomap') renderGeoMap();
+                    
+                    // RENDER OVERVIEW CHARTS + TIMELINE
+                    if (tabId === 'overview') {
+                        renderOverviewCharts();
+                        renderTimelineChart();
+                    }
+                }, 150);
+            }
+
+            // --- ABUSEIPDB COMMENTS TOGGLE ---
+            document.querySelectorAll('.toggle-comments-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    const row = this.closest('tr').nextElementSibling;
+                    if (row && row.classList.contains('comments-row')) {
+                        if (row.style.display === 'none') {
+                            row.style.display = 'table-row';
+                            this.innerHTML = '<i class="fas fa-chevron-up"></i> Hide Comments';
+                            this.style.backgroundColor = 'rgba(0, 243, 255, 0.2)';
+                        } else {
+                            row.style.display = 'none';
+                            const count = this.innerText.match(/\d+/); 
+                            this.innerHTML = `<i class="fas fa-comments"></i> View ${count ? count[0] : ''} Comments`;
+                            this.style.backgroundColor = '';
+                        }
+                    }
+                });
+            });
+
+            // --- CHARTS & GRAPHS RENDERERS ---
+            function renderProtocolChart() {
+                const raw = document.getElementById('protocol-data');
+                const ctx = document.getElementById('protocolChart');
+                if (!raw || !ctx) return;
+
+                if (protocolChartInstance) {
+                    protocolChartInstance.destroy();
+                    protocolChartInstance = null;
+                }
+
+                try {
+                    const protocolData = JSON.parse(raw.textContent);
+                    const labels = Object.keys(protocolData);
+                    let dataValues = Object.values(protocolData);
+                    dataValues = dataValues.map(v => v <= 0 ? null : v);
+
+                    protocolChartInstance = new Chart(ctx, {
+                        type: 'bar',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Packet Count',
+                                data: dataValues,
+                                backgroundColor: 'rgba(0, 243, 255, 0.6)',
+                                borderColor: '#00f3ff',
+                                borderWidth: 1,
+                                hoverBackgroundColor: '#00f3ff',
+                                barPercentage: 0.6,
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { 
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: 'rgba(10, 20, 40, 0.9)',
+                                    titleColor: '#00f3ff',
+                                    bodyColor: '#fff',
+                                    borderColor: 'rgba(77, 140, 255, 0.3)',
+                                    borderWidth: 1
+                                }
+                            },
+                            scales: {
+                                y: { 
+                                    type: 'logarithmic',
+                                    min: 0.1, 
+                                    grid: { color: 'rgba(255,255,255,0.05)' },
+                                    ticks: { color: '#a0a0c0', callback: function(v) { return v === 1000000 ? "1M" : v === 1000 ? "1k" : v === 10 ? "10" : null; } }
+                                },
+                                x: { ticks: { color: '#ffffff', font: { family: 'Orbitron' } }, grid: { display: false } }
+                            }
+                        }
+                    });
+                } catch(e) { console.error("Chart Error:", e); }
+            }
+
+            function renderOverviewCharts() {
+                const rawProtoData = document.getElementById('protocol-data');
+                const ctxProto = document.getElementById('overviewProtocolChart');
+
+                if (rawProtoData && ctxProto) {
+                    const existingChart = Chart.getChart(ctxProto);
+                    if (existingChart) existingChart.destroy();
+
+                    const protoData = JSON.parse(rawProtoData.textContent);
+                    new Chart(ctxProto, {
+                        type: 'doughnut',
+                        data: {
+                            labels: Object.keys(protoData),
+                            datasets: [{
+                                data: Object.values(protoData),
+                                backgroundColor: ['#00f3ff', '#9d00ff', '#00ff9d', '#ff0055', '#ffff00', '#4d8cff'],
+                                borderColor: '#0a0a0f',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: { legend: { position: 'right', labels: { color: '#fff', font: { family: 'Orbitron' } } } }
+                        }
+                    });
+                }
+
+                const rawSessionsData = document.getElementById('sessions-data');
+                const ctxTopIps = document.getElementById('overviewTopIpsChart');
+
+                if (rawSessionsData && ctxTopIps) {
+                    const existingChart = Chart.getChart(ctxTopIps);
+                    if (existingChart) existingChart.destroy();
+
+                    const sessionsData = JSON.parse(rawSessionsData.textContent);
+                    const entries = Object.entries(sessionsData);
+                    const ipEntries = entries.filter(item => isValidIp(item[0]));
+                    
+                    ipEntries.sort((a, b) => b[1].sent - a[1].sent);
+                    const top5 = ipEntries.slice(0, 5);
+
+                    new Chart(ctxTopIps, {
+                        type: 'bar',
+                        data: {
+                            labels: top5.map(item => item[0]),
+                            datasets: [{
+                                label: 'Packets Sent',
+                                data: top5.map(item => item[1].sent),
+                                backgroundColor: 'rgba(0, 243, 255, 0.6)',
+                                borderColor: '#00f3ff',
+                                borderWidth: 1,
+                                borderRadius: 4
+                            }]
+                        },
+                        options: {
+                            indexAxis: 'y',
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#888' } },
+                                y: { grid: { display: false }, ticks: { color: '#fff' } }
+                            },
+                            plugins: { legend: { display: false } }
+                        }
+                    });
+                }
+            }
+
+            function renderTimelineChart() {
+                const rawTimeline = document.getElementById('timeline-data-json');
+                const ctxTimeline = document.getElementById('timelineChart');
+
+                if (!rawTimeline || !ctxTimeline) return;
+
+                if (timelineChartInstance) {
+                    timelineChartInstance.destroy();
+                    timelineChartInstance = null;
+                }
+
+                try {
+                    const timelineData = JSON.parse(rawTimeline.textContent);
+                    // Convert keys (seconds) to numbers
+                    const capturedSeconds = Object.keys(timelineData).map(Number);
+                    
+                    if (capturedSeconds.length === 0) return;
+
+                    const maxSecond = Math.max(...capturedSeconds);
+                    
+                    // Create arrays for Chart.js, filling in zeros for missing seconds
+                    const labels = [];
+                    const dataPoints = [];
+
+                    for (let i = 0; i <= maxSecond; i++) {
+                        labels.push(i + 's'); 
+                        
+                        if (timelineData[i] !== undefined) {
+                            dataPoints.push(timelineData[i]);
+                        } else {
+                            dataPoints.push(0); 
+                        }
+                    }
+
+                    timelineChartInstance = new Chart(ctxTimeline, {
+                        type: 'line',
+                        data: {
+                            labels: labels,
+                            datasets: [{
+                                label: 'Packet Frequency',
+                                data: dataPoints,
+                                borderColor: '#00ff9d',       
+                                backgroundColor: 'rgba(0, 255, 157, 0.1)',
+                                borderWidth: 2,
+                                pointBackgroundColor: '#00ff9d',
+                                pointBorderColor: '#fff',
+                                pointRadius: dataPoints.length > 100 ? 0 : 3, 
+                                pointHoverRadius: 6,
+                                fill: true,
+                                tension: 0.4
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: {
+                                    backgroundColor: 'rgba(10, 20, 40, 0.9)',
+                                    titleColor: '#00ff9d',
+                                    bodyColor: '#fff',
+                                    borderColor: 'rgba(0, 255, 157, 0.3)',
+                                    borderWidth: 1,
+                                    callbacks: {
+                                        title: (items) => `Time: ${items[0].label}`,
+                                        label: (item) => `Traffic: ${item.raw} Packets`
+                                    }
+                                }
+                            },
+                            scales: {
+                                x: {
+                                    grid: { color: 'rgba(255,255,255,0.05)' },
+                                    ticks: { color: '#888', maxTicksLimit: 20 },
+                                    title: { display: true, text: 'Capture Duration (Seconds)', color: '#00ff9d' }
+                                },
+                                y: {
+                                    beginAtZero: true,
+                                    grid: { color: 'rgba(255,255,255,0.05)' },
+                                    ticks: { color: '#fff' }
+                                }
+                            },
+                            interaction: {
+                                mode: 'index',
+                                intersect: false,
+                            },
+                        }
+                    });
+                } catch(e) { console.error("Timeline Chart Error:", e); }
+            }
+
+            function renderNetworkGraph() {
+                const raw = document.getElementById('network-data');
+                const container = document.getElementById('network-graph');
+                if (!raw || !container || container.childElementCount > 0) return;
+
+                try {
+                    const rawData = JSON.parse(raw.textContent);
+                    if (!rawData || !rawData.nodes || rawData.nodes.length === 0) {
+                        container.innerHTML = '<div style="color:#666; text-align:center; padding-top:200px;">No network topology data available.</div>';
+                        return;
+                    }
+                    const options = {
+                        nodes: { shape: 'dot', size: 15, font: { color: '#ffffff', face: 'Roboto', size: 14, strokeWidth: 2, strokeColor: '#000000' }, borderWidth: 2, shadow: true },
+                        edges: { width: 1, color: { color: '#4d8cff', highlight: '#00f3ff', hover: '#00f3ff', opacity: 0.4 }, smooth: { type: 'continuous' } },
+                        groups: { host: { color: { background: '#00f3ff', border: '#ffffff' } }, router: { color: { background: '#9d00ff', border: '#ffffff' }, shape: 'diamond', size: 20 } },
+                        physics: { stabilization: { enabled: true, iterations: 100 }, barnesHut: { gravitationalConstant: -2000, springLength: 100 } },
+                        interaction: { hover: true, tooltipDelay: 200, zoomView: true }
+                    };
+                    new vis.Network(container, { nodes: new vis.DataSet(rawData.nodes), edges: new vis.DataSet(rawData.edges) }, options);
+                } catch(e) { console.error("Graph Error:", e); }
+            }
+
+            function renderGeoMap() {
+                const raw = document.getElementById('geo-data-json');
+                const container = document.getElementById('mapid');
+                if (!raw || !container) return;
+                
+                if (mapInstance) { mapInstance.invalidateSize(); return; }
+
+                try {
+                    const geoData = JSON.parse(raw.textContent);
+                    const bounds = L.latLngBounds([[-90, -180], [90, 180]]);
+                    mapInstance = L.map('mapid', { maxBounds: bounds, maxBoundsViscosity: 1.0, minZoom: 2 }).setView([20, 0], 2);
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { attribution: '&copy; CARTO', subdomains: 'abcd', maxZoom: 19, noWrap: true, bounds: bounds }).addTo(mapInstance);
+                    geoData.forEach(loc => {
+                        const color = loc.type === 'Source' ? '#00f3ff' : '#ff0055';
+                        L.circleMarker([loc.lat, loc.lon], { radius: 6, fillColor: color, color: "#fff", weight: 1, opacity: 1, fillOpacity: 0.8 })
+                        .bindPopup(`<div style="color: #333; font-family: Roboto;"><strong>${loc.ip}</strong><br>${loc.city}, ${loc.country}<br><span style="color: ${color === '#00f3ff' ? 'blue' : 'red'};">${loc.type}</span></div>`)
+                        .addTo(mapInstance);
+                    });
+                } catch(e) { console.error("Map Error:", e); }
+            }
+            
+            // --- Run Initial Charts if on Overview tab ---
+            if(initialTab) { 
+                setTimeout(() => {
+                    renderOverviewCharts();
+                    renderTimelineChart();
+                }, 200); 
+            }
+        });
+
+        function toggleHeaders(btn) {
+        const row = btn.closest('tr').nextElementSibling;
+        if (row.style.display === 'none') {
+            row.style.display = 'table-row';
+            btn.innerHTML = '<i class="fas fa-compress"></i> Hide';
+        } else {
+            row.style.display = 'none';
+            btn.innerHTML = '<i class="fas fa-expand"></i> Details';
+        }
+    }
+    </script>
+</body>
+</html>

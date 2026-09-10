@@ -1,0 +1,17 @@
+{% block content %}
+    <h2>PCAP Analysis Results</h2>
+
+    <!-- Debugging block -->
+    <div style="border: 1px solid red; padding: 10px; margin-bottom: 20px;">
+        <h3>Debug Information</h3>
+        <p><strong>Protocol Distribution Data:</strong></p>
+        <pre>{{ protocol_distribution|default:"No protocol data available" }}</pre>
+        <p><strong>Data Content:</strong></p>
+        <pre>{{ data|default:"No data available" }}</pre>
+        <p><strong>Terminal Output:</strong></p>
+        <pre>{{ terminal_output|default:"No terminal output" }}</pre>
+    </div>
+
+    <!-- Rest of your HTML content -->
+
+{% endblock %}

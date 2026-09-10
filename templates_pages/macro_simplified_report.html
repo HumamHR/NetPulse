@@ -1,0 +1,27 @@
+import json
+from django.http import JsonResponse
+import openai
+
+def macro_simplified_report(request):
+    if request.method == 'POST':
+        data = json.loads(request.body)
+        scan_results = data.get('scan_results')
+
+        if not scan_results:
+            return JsonResponse({'simplified_report': 'No scan results received.'})
+
+        # Call OpenAI API
+        prompt = f"Provide a simplified cybersecurity report for a non-expert user based on these macro scan results:\n{scan_results}"
+
+        try:
+            completion = openai.ChatCompletion.create(
+                model="gpt-4",
+                messages=[{"role": "user", "content": prompt}],
+                temperature=0.7,
+                max_tokens=400
+            )
+            simplified_report = completion.choices[0].message.content
+        except Exception as e:
+            simplified_report = f"Error generating report: {str(e)}"
+
+        return JsonResponse({'simplified_report': simplified_report})
